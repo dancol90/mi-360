@@ -1,0 +1,5 @@
+.vs/
+**/bin/
+**/obj/
+packages/
+mi-360.sln.DotSettings.user
