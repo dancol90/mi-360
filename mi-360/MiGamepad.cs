@@ -144,9 +144,9 @@ namespace mi360
 
                 // Analog axis
                 xInputReport.SetAxis(Xbox360Axes.LeftThumbX, MapAnalog(data[4]));
-                xInputReport.SetAxis(Xbox360Axes.LeftThumbY, MapAnalog(data[5]));
+                xInputReport.SetAxis(Xbox360Axes.LeftThumbY, MapAnalog(data[5], true));
                 xInputReport.SetAxis(Xbox360Axes.RightThumbX, MapAnalog(data[6]));
-                xInputReport.SetAxis(Xbox360Axes.RightThumbY, MapAnalog(data[7]));
+                xInputReport.SetAxis(Xbox360Axes.RightThumbY, MapAnalog(data[7], true));
 
                 // Triggers
                 xInputReport.SetAxis(Xbox360Axes.LeftTrigger, data[10]);
@@ -173,10 +173,17 @@ namespace mi360
             return ((b >> bit) & 1) != 0;
         }
 
-        private short MapAnalog(byte value)
+        private short MapAnalog(byte value, bool invert = false)
         {
             // Value has value in 0-255
-            return (short)(32767 * (value - 128) / 127);
+
+            // Clip it in range -127;127
+            var centered = Math.Max(-127, value - 128);
+
+            if (invert)
+                centered = -centered;
+
+            return (short)(32767 * centered / 127);
         }
 
         private void TargetOnFeedbackReceived(object sender, Xbox360FeedbackReceivedEventArgs e)
