@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -82,7 +83,7 @@ namespace mi360
                     continue;
 
                 // This is a new gamepad
-                ShowNotification("New gamepad found", device.ToString());
+                ShowNotification("Gamepad connected", "A new gamepad is up and running.");
 
                 var gamepad = new MiGamepad(device, _ViGEmClient);
                 _Gamepads.Add(device.DevicePath, gamepad);
@@ -98,7 +99,7 @@ namespace mi360
                 {
                     var gamepad = _Gamepads[path];
 
-                    ShowNotification("Gamepad disconnected", gamepad.Device.ToString());
+                    ShowNotification("Gamepad disconnected", "A gamepad disconnected and is not available any more.");
                     gamepad.Stop();
                     gamepad.Dispose();
                     _Gamepads.Remove(path);
@@ -113,6 +114,8 @@ namespace mi360
             _NotifyIcon.ShowBalloonTip(timeout);
         }
 
+        #region Hardware utilities
+
         private void EnableHidGuardian()
         {
             // Temp
@@ -123,15 +126,7 @@ namespace mi360
             HidGuardian.AddToWhitelist(Process.GetCurrentProcess().Id);
 
             // Disable and reenable the device to let the driver hide the HID gamepad and show Xbox360 one
-            try
-            {
-                Win32Api.DisableDevice(XiaomiGamepadHardwareId, true);
-                Win32Api.DisableDevice(XiaomiGamepadHardwareId, false);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+            DisableEnableGamepads();
         }
 
         private void DisableHidGuardian()
@@ -140,9 +135,22 @@ namespace mi360
             HidGuardian.RemoveFromWhitelist(Process.GetCurrentProcess().Id);
 
             // Disable and reenable the device to let the driver hide the emulated gamepad and show the HID one again
+            DisableEnableGamepads();
+        }
+
+        private void DisableEnableGamepads()
+        {
             try
             {
                 Win32Api.DisableDevice(XiaomiGamepadHardwareId, true);
+            }
+            catch (Win32Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            try
+            {
                 Win32Api.DisableDevice(XiaomiGamepadHardwareId, false);
             }
             catch (Exception e)
@@ -150,6 +158,8 @@ namespace mi360
                 Console.WriteLine(e);
             }
         }
+
+        #endregion
 
         #region Event Handlers
 

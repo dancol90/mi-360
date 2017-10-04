@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -157,11 +158,9 @@ namespace mi360
 
         private static void CheckError(string message, int lasterror = -1)
         {
-
             int code = lasterror == -1 ? Marshal.GetLastWin32Error() : lasterror;
             if (code != 0)
-                throw new ApplicationException(String.Format("Error disabling hardware device (Code {0}): {1}", code,
-                    message));
+                throw new Win32Exception(code, $"A API call returned an error: {message}");
         }
 
         private static string GetStringPropertyForDevice(IntPtr info, SP_DEVINFO_DATA devdata, uint propId)
