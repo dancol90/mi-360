@@ -35,7 +35,7 @@
     <StartupObject />
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>ApplicationIcon.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\ApplicationIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -86,7 +86,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="ApplicationIcon.ico" />
-    <None Include="Resources\TrayIcon.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HidLibrary\HidLibrary.csproj">
