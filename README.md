@@ -8,8 +8,9 @@ XInput emulation is provied by ViGem, by Benjamin Höglinger
 ## HIDLibrary
 
 This repository contains a custom version of HIDLibrary by Mike O'Brien, with some changes that addresses a common problem.
-The only change, for now, is the add of a call to ``NativeMethods.CancelIo()`` in case of a timeout in ``ReadData()``.
+The first change is the addition of a call to ``NativeMethods.CancelIo()`` in case of a timeout in ``ReadData()``.
 Without that, every subsequent call to ReadData after a timeout will result in a timeout. Also, the library crashes when closing the device, making the whole application crash (at a very low level).
+The second change consists in avoiding any call to `IsConnected` when reading a HID report. This property forces a re-enumeration of the devices, an activity that is pretty heavy when repeated several times per second.
 
 ## Installation
 
