@@ -119,8 +119,8 @@ namespace mi360
         private void EnableHidGuardian()
         {
             // Temp
-            HidGuardian.ClearWhitelistedProcesses();
-            HidGuardian.ClearAffectedDevices();
+            //HidGuardian.ClearWhitelistedProcesses();
+            //HidGuardian.ClearAffectedDevices();
 
             HidGuardian.AddDeviceToAffectedList(XiaomiGamepadHardwareId);
             HidGuardian.AddToWhitelist(Process.GetCurrentProcess().Id);

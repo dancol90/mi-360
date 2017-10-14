@@ -4,3 +4,4 @@ Source/.vs/
 Source/packages/
 Source/mi-360.sln.DotSettings.user
 Build/
+Installer/*.exe
