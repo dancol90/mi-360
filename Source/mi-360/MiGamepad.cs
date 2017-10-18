@@ -36,19 +36,25 @@ namespace mi360
             _Device.MonitorDeviceEvents = false;
 
             _Target = new Xbox360Controller(client);
-            _Target.FeedbackReceived += TargetOnFeedbackReceived;
+            _Target.FeedbackReceived += Target_OnFeedbackReceived;
 
             // TODO mark the threads as background?
             _InputThread = new Thread(DeviceWorker);
 
             _CTS = new CancellationTokenSource();
+
+            LedNumber = 0xFF;
         }
 
         #region Properties
 
         public HidDevice Device => _Device;
 
+        public int LedNumber { get; set; }
+
         #endregion
+
+        #region Methods
 
         public void Dispose()
         {
@@ -60,8 +66,6 @@ namespace mi360
 
             _Target.Dispose();
         }
-
-        #region Methods
 
         public void Start()
         {
@@ -186,7 +190,11 @@ namespace mi360
             return (short)(32767 * centered / 127);
         }
 
-        private void TargetOnFeedbackReceived(object sender, Xbox360FeedbackReceivedEventArgs e)
+        #endregion
+
+        #region Event Handlers
+
+        private void Target_OnFeedbackReceived(object sender, Xbox360FeedbackReceivedEventArgs e)
         {
             byte[] data = { 0x20, e.SmallMotor, e.LargeMotor };
 
@@ -195,6 +203,12 @@ namespace mi360
                 if (_Device.IsOpen)
                     _Device.WriteFeatureData(data);
             });
+
+            if (LedNumber != e.LedNumber)
+            {
+                LedNumber = e.LedNumber;
+                // TODO raise event here
+            }
         }
 
         #endregion

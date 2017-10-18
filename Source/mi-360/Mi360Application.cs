@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using HidLibrary;
 using mi360.Properties;
 using Nefarius.ViGEm.Client;
+using mi360.Win32;
 
 namespace mi360
 {
@@ -142,7 +143,7 @@ namespace mi360
         {
             try
             {
-                Win32Api.DisableDevice(XiaomiGamepadHardwareId, true);
+                DeviceStateManager.ChangeDeviceState(XiaomiGamepadHardwareId, true);
             }
             catch (Win32Exception e)
             {
@@ -151,7 +152,7 @@ namespace mi360
 
             try
             {
-                Win32Api.DisableDevice(XiaomiGamepadHardwareId, false);
+                DeviceStateManager.ChangeDeviceState(XiaomiGamepadHardwareId, false);
             }
             catch (Exception e)
             {

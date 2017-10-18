@@ -67,7 +67,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Win32Api.cs" />
+    <Compile Include="Win32\DeviceMonitor.cs" />
+    <Compile Include="Win32\DeviceStateManager.cs" />
+    <Compile Include="Win32\Native\DBT.cs" />
+    <Compile Include="Win32\Native\SetupApi.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
