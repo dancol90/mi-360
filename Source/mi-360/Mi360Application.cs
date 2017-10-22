@@ -6,40 +6,41 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using HidLibrary;
-using mi360.Properties;
 using Nefarius.ViGEm.Client;
+using mi360.Properties;
 using mi360.Win32;
 
 namespace mi360
 {
     class Mi360Application : ApplicationContext
     {
-        private static int XiaomiGamepadVid = 0x2717;
-        private static int XiaomiGamepadPid = 0x3144;
-        private static string XiaomiGamepadHardwareId = "HID\\{00001124-0000-1000-8000-00805f9b34fb}_VID&00022717_PID&3144";
+        private static string XiaomiGamepadHardwareId = @"HID\{00001124-0000-1000-8000-00805f9b34fb}_VID&00022717_PID&3144";
+        private static string XiaomiGamepadHardwareFilter = @"VID&00022717_PID&3144";
 
         private NotifyIcon _NotifyIcon;
-        private System.Threading.Timer _MonitorTimer;
-        private Dictionary<string, MiGamepad> _Gamepads;
-        private ViGEmClient _ViGEmClient;
+        private IMonitor _Monitor;
+        private XInputManager _Manager;
 
         public Mi360Application()
         {
             InitializeComponents();
 
             EnableHidGuardian();
+            
+            _Monitor = new HidMonitor(XiaomiGamepadHardwareFilter);
+            _Monitor.Start();
 
-            _ViGEmClient = new ViGEmClient();
+            _Monitor.DeviceAttached += Monitor_DeviceAttached;
+            _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
 
-            _Gamepads = new Dictionary<string, MiGamepad>();
-            _MonitorTimer = new System.Threading.Timer(SearchForDevice, null, 0, 5000);
+            _Manager = new XInputManager();
         }
 
         #region Initialization/Cleanup methods
 
         private void InitializeComponents()
         {
-            Application.ApplicationExit += Application_OnApplicationExit;
+            Application.ApplicationExit += Application_ApplicationExit;
 
             _NotifyIcon = new NotifyIcon()
             {
@@ -58,55 +59,15 @@ namespace mi360
 
         protected override void Dispose(bool disposing)
         {
-            _MonitorTimer.Dispose();
+            _Monitor.Stop();
+            _Monitor.Dispose();
 
-            foreach (var gamepad in _Gamepads)
-            {
-                gamepad.Value.Dispose();
-            }
+            _Manager.Dispose();
 
             base.Dispose(disposing);
         }
 
         #endregion
-
-        private void SearchForDevice(object state)
-        {
-            var devices = HidDevices.Enumerate(XiaomiGamepadVid, XiaomiGamepadPid);
-            var connectedPaths = new List<string>();
-
-            foreach (var device in devices)
-            {
-                connectedPaths.Add(device.DevicePath);
-
-                // If the device is already running, go on
-                if (_Gamepads.ContainsKey(device.DevicePath))
-                    continue;
-
-                // This is a new gamepad
-                ShowNotification("Gamepad connected", "A new gamepad is up and running.");
-
-                var gamepad = new MiGamepad(device, _ViGEmClient);
-                _Gamepads.Add(device.DevicePath, gamepad);
-                gamepad.Start();
-            }
-
-            // Stop and remove any disconnected gamepad
-            var runningPaths = _Gamepads.Keys.ToArray();
-
-            foreach (var path in runningPaths)
-            {
-                if (!connectedPaths.Contains(path))
-                {
-                    var gamepad = _Gamepads[path];
-
-                    ShowNotification("Gamepad disconnected", "A gamepad disconnected and is not available any more.");
-                    gamepad.Stop();
-                    gamepad.Dispose();
-                    _Gamepads.Remove(path);
-                }
-            }
-        }
 
         private void ShowNotification(string title, string message, int timeout = 2000)
         {
@@ -127,7 +88,7 @@ namespace mi360
             HidGuardian.AddToWhitelist(Process.GetCurrentProcess().Id);
 
             // Disable and reenable the device to let the driver hide the HID gamepad and show Xbox360 one
-            DisableEnableGamepads();
+            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
         }
 
         private void DisableHidGuardian()
@@ -136,28 +97,7 @@ namespace mi360
             HidGuardian.RemoveFromWhitelist(Process.GetCurrentProcess().Id);
 
             // Disable and reenable the device to let the driver hide the emulated gamepad and show the HID one again
-            DisableEnableGamepads();
-        }
-
-        private void DisableEnableGamepads()
-        {
-            try
-            {
-                DeviceStateManager.ChangeDeviceState(XiaomiGamepadHardwareId, true);
-            }
-            catch (Win32Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            try
-            {
-                DeviceStateManager.ChangeDeviceState(XiaomiGamepadHardwareId, false);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
         }
 
         #endregion
@@ -169,14 +109,24 @@ namespace mi360
             Application.Exit();
         }
 
-        private void Application_OnApplicationExit(object sender, EventArgs eventArgs)
+        private void Application_ApplicationExit(object sender, EventArgs eventArgs)
         {
             _NotifyIcon.Visible = false;
-            Dispose(true);
             DisableHidGuardian();
         }
 
-        #endregion
+        private void Monitor_DeviceAttached(object sender, string s)
+        {
+            Console.WriteLine("HID Connected: " + s);
+            _Manager.AddAndStart(s);
+        }
 
+        private void Monitor_DeviceRemoved(object sender, string s)
+        {
+            Console.WriteLine("HID Disconnected: " + s);
+            _Manager.StopAndRemove(s);
+        }
+
+        #endregion
     }
 }

@@ -103,6 +103,12 @@ namespace mi360.Win32.Native
             UInt32 PropertyBufferSize,
             [In, Out] ref UInt32 RequiredSize);
 
+        [DllImport("setupapi.dll", SetLastError = true)]
+        public static extern bool SetupDiCallClassInstaller(
+            UInt32 InstallFunction,
+            IntPtr DeviceInfoSet,
+            ref SP_DEVINFO_DATA DeviceInfoData
+        );
         #endregion
     }
 }

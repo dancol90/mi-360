@@ -30,9 +30,9 @@ namespace mi360
         private Thread _InputThread;
         private CancellationTokenSource _CTS;
 
-        public MiGamepad(HidDevice device, ViGEmClient client)
+        public MiGamepad(string device, ViGEmClient client)
         {
-            _Device = device;
+            _Device = HidDevices.GetDevice(device);
             _Device.MonitorDeviceEvents = false;
 
             _Target = new Xbox360Controller(client);
@@ -50,7 +50,9 @@ namespace mi360
 
         public HidDevice Device => _Device;
 
-        public int LedNumber { get; set; }
+        public int LedNumber { get; private set; }
+
+        public bool IsActive => _InputThread.IsAlive;
 
         #endregion
 

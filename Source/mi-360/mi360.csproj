@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
@@ -69,8 +70,11 @@
     </Compile>
     <Compile Include="Win32\DeviceMonitor.cs" />
     <Compile Include="Win32\DeviceStateManager.cs" />
+    <Compile Include="Win32\HidMonitor.cs" />
+    <Compile Include="Win32\IMonitor.cs" />
     <Compile Include="Win32\Native\DBT.cs" />
     <Compile Include="Win32\Native\SetupApi.cs" />
+    <Compile Include="XInputManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

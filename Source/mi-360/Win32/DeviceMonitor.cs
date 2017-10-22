@@ -5,7 +5,7 @@ using static mi360.Win32.Native.DBT;
 
 namespace mi360.Win32
 {
-    public class DeviceMonitor : NativeWindow, IDisposable
+    public class DeviceMonitor : NativeWindow, IMonitor
     {
         #region Constants & Fields
 
@@ -42,7 +42,7 @@ namespace mi360.Win32
 
             IntPtr buffer = Marshal.AllocHGlobal(size);
             Marshal.StructureToPtr(notificationFilter, buffer, true);
-            IntPtr result = RegisterDeviceNotification(Handle, buffer, (Int32)(DEVICE_NOTIFY.DEVICE_NOTIFY_WINDOW_HANDLE));
+            IntPtr result = RegisterDeviceNotification(Handle, buffer, (Int32)(DEVICE_NOTIFY.DEVICE_NOTIFY_WINDOW_HANDLE | DEVICE_NOTIFY.DEVICE_NOTIFY_ALL_INTERFACE_CLASSES));
         }
 
         public void Stop()

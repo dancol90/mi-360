@@ -52,6 +52,7 @@ namespace mi360.Win32
                 CheckError("SetupDiSetClassInstallParams");
 
                 SetupDiChangeState(info, ref devdata);
+                //SetupDiCallClassInstaller(DIF_PROPERTYCHANGE, info, ref devdata);
                 CheckError("SetupDiChangeState");
             }
             finally
@@ -65,7 +66,7 @@ namespace mi360.Win32
         {
             int code = lasterror == -1 ? Marshal.GetLastWin32Error() : lasterror;
             if (code != 0)
-                throw new Win32Exception(code, $"A API call returned an error: {message}");
+                throw new Win32Exception(code, $"An API call returned an error: {message}");
         }
 
         private static string GetStringPropertyForDevice(IntPtr info, SP_DEVINFO_DATA devdata, uint propId)
@@ -96,6 +97,19 @@ namespace mi360.Win32
                 if (buffer != IntPtr.Zero)
                     Marshal.FreeHGlobal(buffer);
             }
+        }
+
+        public static bool DisableReEnableDevice(string filter)
+        {
+            Win32Exception ex = null;
+
+            try { ChangeDeviceState(filter, true); }
+            catch(Win32Exception e) { ex = e; }
+
+            try { ChangeDeviceState(filter, true); }
+            catch (Win32Exception e) { ex = e; }
+
+            return ex != null;
         }
     }
 }
