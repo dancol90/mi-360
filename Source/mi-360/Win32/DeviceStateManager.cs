@@ -106,7 +106,7 @@ namespace mi360.Win32
             try { ChangeDeviceState(filter, true); }
             catch(Win32Exception e) { ex = e; }
 
-            try { ChangeDeviceState(filter, true); }
+            try { ChangeDeviceState(filter, false); }
             catch (Win32Exception e) { ex = e; }
 
             return ex != null;
