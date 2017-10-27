@@ -27,8 +27,9 @@ namespace mi360
 
         private readonly HidDevice _Device;
         private readonly Xbox360Controller _Target;
-        private Thread _InputThread;
-        private CancellationTokenSource _CTS;
+        private readonly Xbox360Report _Report;
+        private readonly Thread _InputThread;
+        private readonly CancellationTokenSource _CTS;
 
         public MiGamepad(string device, ViGEmClient client)
         {
@@ -42,6 +43,7 @@ namespace mi360
             _InputThread = new Thread(DeviceWorker);
 
             _CTS = new CancellationTokenSource();
+            _Report = new Xbox360Report();
 
             LedNumber = 0xFF;
         }
@@ -102,7 +104,6 @@ namespace mi360
             }
 
             HidReport hidReport;
-            Xbox360Report xInputReport = new Xbox360Report();
 
             while (!_CTS.Token.IsCancellationRequested)
             {
@@ -123,45 +124,52 @@ namespace mi360
 
                 var data = hidReport.Data;
 
-                xInputReport.SetButtonState(Xbox360Buttons.A, GetBit(data[0], 0));
-                xInputReport.SetButtonState(Xbox360Buttons.B, GetBit(data[0], 1));
-                xInputReport.SetButtonState(Xbox360Buttons.X, GetBit(data[0], 3));
-                xInputReport.SetButtonState(Xbox360Buttons.Y, GetBit(data[0], 4));
-                xInputReport.SetButtonState(Xbox360Buttons.LeftShoulder, GetBit(data[0], 6));
-                xInputReport.SetButtonState(Xbox360Buttons.RightShoulder, GetBit(data[0], 7));
+                lock (_Report)
+                {
+                    _Report.SetButtonState(Xbox360Buttons.A, GetBit(data[0], 0));
+                    _Report.SetButtonState(Xbox360Buttons.B, GetBit(data[0], 1));
+                    _Report.SetButtonState(Xbox360Buttons.X, GetBit(data[0], 3));
+                    _Report.SetButtonState(Xbox360Buttons.Y, GetBit(data[0], 4));
+                    _Report.SetButtonState(Xbox360Buttons.LeftShoulder, GetBit(data[0], 6));
+                    _Report.SetButtonState(Xbox360Buttons.RightShoulder, GetBit(data[0], 7));
 
-                xInputReport.SetButtonState(Xbox360Buttons.Back, GetBit(data[1], 2));
-                xInputReport.SetButtonState(Xbox360Buttons.Start, GetBit(data[1], 3));
-                xInputReport.SetButtonState(Xbox360Buttons.LeftThumb, GetBit(data[1], 5));
-                xInputReport.SetButtonState(Xbox360Buttons.RightThumb, GetBit(data[1], 6));
+                    _Report.SetButtonState(Xbox360Buttons.Back, GetBit(data[1], 2));
+                    _Report.SetButtonState(Xbox360Buttons.Start, GetBit(data[1], 3));
+                    _Report.SetButtonState(Xbox360Buttons.LeftThumb, GetBit(data[1], 5));
+                    _Report.SetButtonState(Xbox360Buttons.RightThumb, GetBit(data[1], 6));
 
                 // Reset Hat switch status, as is set to 15 (all directions set, impossible state)
-                xInputReport.SetButtonState(Xbox360Buttons.Up, false);
-                xInputReport.SetButtonState(Xbox360Buttons.Left, false);
-                xInputReport.SetButtonState(Xbox360Buttons.Down, false);
-                xInputReport.SetButtonState(Xbox360Buttons.Right, false);
+                    _Report.SetButtonState(Xbox360Buttons.Up, false);
+                    _Report.SetButtonState(Xbox360Buttons.Left, false);
+                    _Report.SetButtonState(Xbox360Buttons.Down, false);
+                    _Report.SetButtonState(Xbox360Buttons.Right, false);
 
                 if (data[3] < 8)
                 {
                     var btns = HatSwitches[data[3]];
                     // Hat Switch is a number from 0 to 7, where 0 is Up, 1 is Up-Left, etc.
-                    xInputReport.SetButtons(btns);
+                        _Report.SetButtons(btns);
                 }
 
                 // Analog axis
-                xInputReport.SetAxis(Xbox360Axes.LeftThumbX, MapAnalog(data[4]));
-                xInputReport.SetAxis(Xbox360Axes.LeftThumbY, MapAnalog(data[5], true));
-                xInputReport.SetAxis(Xbox360Axes.RightThumbX, MapAnalog(data[6]));
-                xInputReport.SetAxis(Xbox360Axes.RightThumbY, MapAnalog(data[7], true));
+                    _Report.SetAxis(Xbox360Axes.LeftThumbX, MapAnalog(data[4]));
+                    _Report.SetAxis(Xbox360Axes.LeftThumbY, MapAnalog(data[5], true));
+                    _Report.SetAxis(Xbox360Axes.RightThumbX, MapAnalog(data[6]));
+                    _Report.SetAxis(Xbox360Axes.RightThumbY, MapAnalog(data[7], true));
 
                 // Triggers
-                xInputReport.SetAxis(Xbox360Axes.LeftTrigger, data[10]);
-                xInputReport.SetAxis(Xbox360Axes.RightTrigger, data[11]);
+                    _Report.SetAxis(Xbox360Axes.LeftTrigger, data[10]);
+                    _Report.SetAxis(Xbox360Axes.RightTrigger, data[11]);
 
                 // Logo ("home") button
-                xInputReport.SetButtonState((Xbox360Buttons)0x0400, false);
+                    if (GetBit(data[19], 0))
+                    {
+                        _Report.SetButtonState((Xbox360Buttons)0x0400, true);
+                        Task.Delay(200).ContinueWith(DelayedReleaseGuideButton);
+                    }
 
-                _Target.SendReport(xInputReport);
+                    _Target.SendReport(_Report);
+                }
             }
 
             // Disconnect the virtual Xbox360 gamepad
@@ -190,6 +198,15 @@ namespace mi360
                 centered = -centered;
 
             return (short)(32767 * centered / 127);
+        }
+
+        private void DelayedReleaseGuideButton(Task t)
+        {
+            lock (_Report)
+            {
+                _Report.SetButtonState((Xbox360Buttons)0x0400, false);
+                _Target.SendReport(_Report);
+            }
         }
 
         #endregion
