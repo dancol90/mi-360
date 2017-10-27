@@ -29,6 +29,18 @@ namespace mi360
         private readonly Xbox360Controller _Target;
         private Thread _InputThread;
         private CancellationTokenSource _CTS;
+        private bool _LogoButtonActive = false;
+        private Timer _LogoButtonTimer = null;
+
+        private void DeactivateLogoButton(object state) //State parameter is not used because we want the most recent report
+        {
+            _LogoButtonActive = false;
+            XInputReport.SetButtonState((Xbox360Buttons)0x0400, _LogoButtonActive);
+            _Target.SendReport(XInputReport);
+        }
+
+
+        private Xbox360Report XInputReport { get; set; }
 
         public MiGamepad(string device, ViGEmClient client)
         {
@@ -159,8 +171,15 @@ namespace mi360
                 xInputReport.SetAxis(Xbox360Axes.RightTrigger, data[11]);
 
                 // Logo ("home") button
-                xInputReport.SetButtonState((Xbox360Buttons)0x0400, false);
+                if (GetBit(data[19], 0))
+                {
+                    _LogoButtonActive = true;
+                    _LogoButtonTimer = _LogoButtonTimer ?? new Timer(DeactivateLogoButton, null, Timeout.Infinite, Timeout.Infinite);
+                    _LogoButtonTimer.Change(200, Timeout.Infinite);
+                }
+                xInputReport.SetButtonState((Xbox360Buttons)0x0400, _LogoButtonActive);
 
+                XInputReport = xInputReport;
                 _Target.SendReport(xInputReport);
             }
 
