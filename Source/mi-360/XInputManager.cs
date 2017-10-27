@@ -10,6 +10,9 @@ namespace mi360
 {
     class XInputManager : IDisposable
     {
+        public event EventHandler GamepadRunning;
+        public event EventHandler GamepadRemoved;
+
         private Dictionary<string, MiGamepad> _Gamepads;
         private ViGEmClient _ViGEmClient;
 
@@ -40,6 +43,9 @@ namespace mi360
             var gamepad = new MiGamepad(device, _ViGEmClient);
             _Gamepads.Add(device, gamepad);
 
+            gamepad.Started += Gamepad_Started;
+            gamepad.Ended += Gamepad_Ended;
+
             gamepad.Start();
 
             return true;
@@ -52,7 +58,12 @@ namespace mi360
             
             var gamepad = _Gamepads[device];
 
-            gamepad.Stop();
+            if (gamepad.IsActive)
+                gamepad.Stop();
+
+            gamepad.Started -= Gamepad_Started;
+            gamepad.Ended -= Gamepad_Ended;
+
             gamepad.Dispose();
 
             _Gamepads.Remove(device);
@@ -64,5 +75,17 @@ namespace mi360
         }
 
         #endregion
+
+        private void Gamepad_Ended(object sender, EventArgs eventArgs)
+        {
+            var gamepad = sender as MiGamepad;
+            StopAndRemove(gamepad.Device.DevicePath);
+            GamepadRemoved?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void Gamepad_Started(object sender, EventArgs eventArgs)
+        {
+            GamepadRunning?.Invoke(this, EventArgs.Empty);
+        }
     }
 }

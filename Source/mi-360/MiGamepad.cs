@@ -25,6 +25,9 @@ namespace mi360
             new [] { Xbox360Buttons.Left, Xbox360Buttons.Up },
         };
 
+        public event EventHandler Started;
+        public event EventHandler Ended;
+
         private readonly HidDevice _Device;
         private readonly Xbox360Controller _Target;
         private readonly Xbox360Report _Report;
@@ -78,6 +81,9 @@ namespace mi360
 
         public void Stop()
         {
+            if (_CTS.IsCancellationRequested)
+                return;
+
             _CTS.Cancel();
             _InputThread.Join();
         }
@@ -102,6 +108,8 @@ namespace mi360
                 _Target.Disconnect();
                 _Target.Connect();
             }
+
+            Started?.Invoke(this, EventArgs.Empty);
 
             HidReport hidReport;
 
@@ -138,30 +146,30 @@ namespace mi360
                     _Report.SetButtonState(Xbox360Buttons.LeftThumb, GetBit(data[1], 5));
                     _Report.SetButtonState(Xbox360Buttons.RightThumb, GetBit(data[1], 6));
 
-                // Reset Hat switch status, as is set to 15 (all directions set, impossible state)
+                    // Reset Hat switch status, as is set to 15 (all directions set, impossible state)
                     _Report.SetButtonState(Xbox360Buttons.Up, false);
                     _Report.SetButtonState(Xbox360Buttons.Left, false);
                     _Report.SetButtonState(Xbox360Buttons.Down, false);
                     _Report.SetButtonState(Xbox360Buttons.Right, false);
 
-                if (data[3] < 8)
-                {
-                    var btns = HatSwitches[data[3]];
-                    // Hat Switch is a number from 0 to 7, where 0 is Up, 1 is Up-Left, etc.
+                    if (data[3] < 8)
+                    {
+                        var btns = HatSwitches[data[3]];
+                        // Hat Switch is a number from 0 to 7, where 0 is Up, 1 is Up-Left, etc.
                         _Report.SetButtons(btns);
-                }
+                    }
 
-                // Analog axis
+                    // Analog axis
                     _Report.SetAxis(Xbox360Axes.LeftThumbX, MapAnalog(data[4]));
                     _Report.SetAxis(Xbox360Axes.LeftThumbY, MapAnalog(data[5], true));
                     _Report.SetAxis(Xbox360Axes.RightThumbX, MapAnalog(data[6]));
                     _Report.SetAxis(Xbox360Axes.RightThumbY, MapAnalog(data[7], true));
 
-                // Triggers
+                    // Triggers
                     _Report.SetAxis(Xbox360Axes.LeftTrigger, data[10]);
                     _Report.SetAxis(Xbox360Axes.RightTrigger, data[11]);
 
-                // Logo ("home") button
+                    // Logo ("home") button
                     if (GetBit(data[19], 0))
                     {
                         _Report.SetButtonState((Xbox360Buttons)0x0400, true);
@@ -180,6 +188,7 @@ namespace mi360
             _Device.CloseDevice();
 
             Console.WriteLine("Exiting worker thread for {0}", _Device.ToString());
+            Ended?.Invoke(this, EventArgs.Empty);
         }
 
         private bool GetBit(byte b, int bit)

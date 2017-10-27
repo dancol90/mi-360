@@ -5,8 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using HidLibrary;
-using Nefarius.ViGEm.Client;
 using mi360.Properties;
 using mi360.Win32;
 
@@ -34,6 +32,8 @@ namespace mi360
             _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
 
             _Manager = new XInputManager();
+            _Manager.GamepadRunning += Manager_GamepadRunning;
+            _Manager.GamepadRemoved += Manager_GamepadRemoved;
         }
 
         #region Initialization/Cleanup methods
@@ -81,8 +81,8 @@ namespace mi360
         private void EnableHidGuardian()
         {
             // Temp
-            //HidGuardian.ClearWhitelistedProcesses();
-            //HidGuardian.ClearAffectedDevices();
+            HidGuardian.ClearWhitelistedProcesses();
+            HidGuardian.ClearAffectedDevices();
 
             HidGuardian.AddDeviceToAffectedList(XiaomiGamepadHardwareId);
             HidGuardian.AddToWhitelist(Process.GetCurrentProcess().Id);
@@ -127,6 +127,15 @@ namespace mi360
             _Manager.StopAndRemove(s);
         }
 
+        private void Manager_GamepadRemoved(object sender, EventArgs eventArgs)
+        {
+            ShowNotification("Gamepad disconnected", "A gamepad has disconnected and is not available anymore.");
+        }
+
+        private void Manager_GamepadRunning(object sender, EventArgs eventArgs)
+        {
+            ShowNotification("Gamepad connected", "A new gamepad is now available as XInput device.");
+        }
         #endregion
     }
 }
