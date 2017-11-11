@@ -24,12 +24,15 @@ namespace mi360
             var list = wlKey?.GetSubKeyNames();
             wlKey?.Close();
 
-            return list.Select(int.Parse);
+            return list?.Select(int.Parse) ?? new int[] { };
         }
 
         public static void ClearWhitelistedProcesses()
         {
             var wlKey = Registry.LocalMachine.OpenSubKey(HidWhitelistRegistryKeyBase);
+
+            if (wlKey == null)
+                return;
 
             foreach (var subKeyName in wlKey.GetSubKeyNames())
                 Registry.LocalMachine.DeleteSubKey($"{HidWhitelistRegistryKeyBase}\\{subKeyName}");

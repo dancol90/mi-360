@@ -23,6 +23,8 @@ namespace mi360
         {
             InitializeComponents();
 
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
             EnableHidGuardian();
             
             _Monitor = new HidMonitor(XiaomiGamepadHardwareFilter);
@@ -136,6 +138,20 @@ namespace mi360
         {
             ShowNotification("Gamepad connected", "A new gamepad is now available as XInput device.");
         }
+
+        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs args)
+        {
+            string message;
+
+            if (args.ExceptionObject is Exception)
+                message = (args.ExceptionObject as Exception).Message;
+            else
+                message = args.ExceptionObject.ToString();
+
+            MessageBox.Show("fasdfasdf");
+            MessageBox.Show("mi-360 has stopped working. The cause of the problem is:\n\n" + message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
         #endregion
     }
 }
