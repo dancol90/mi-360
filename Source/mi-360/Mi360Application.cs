@@ -148,7 +148,6 @@ namespace mi360
             else
                 message = args.ExceptionObject.ToString();
 
-            MessageBox.Show("fasdfasdf");
             MessageBox.Show("mi-360 has stopped working. The cause of the problem is:\n\n" + message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
