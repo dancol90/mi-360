@@ -26,16 +26,15 @@ namespace mi360
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
             EnableHidGuardian();
-            
-            _Monitor = new HidMonitor(XiaomiGamepadHardwareFilter);
-            _Monitor.Start();
-
-            _Monitor.DeviceAttached += Monitor_DeviceAttached;
-            _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
 
             _Manager = new XInputManager();
             _Manager.GamepadRunning += Manager_GamepadRunning;
             _Manager.GamepadRemoved += Manager_GamepadRemoved;
+
+            _Monitor = new HidMonitor(XiaomiGamepadHardwareFilter);
+            _Monitor.DeviceAttached += Monitor_DeviceAttached;
+            _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
+            _Monitor.Start();
         }
 
         #region Initialization/Cleanup methods

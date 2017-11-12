@@ -24,7 +24,10 @@ namespace mi360
 
         public void Dispose()
         {
-            foreach (var device in _Gamepads.Values)
+            // When calling Stop() the device will get removed from the dictionary, do this to avoid exceptions in enumeration
+            var devices = _Gamepads.Values.ToArray();
+
+            foreach (var device in devices)
             {
                 device.Stop();
                 device.Dispose();
