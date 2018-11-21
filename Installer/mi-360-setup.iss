@@ -2,7 +2,8 @@
 #define BinaryPath "..\Build\Release\"
 #define DriverPath "..\Drivers\"
 
-; Destination folder inside {app} where to put drivers files#define DestDriversFolder "Drivers"
+; Destination folder inside {app} where to put drivers files
+#define DestDriversFolder "Drivers"
 
 ; Application metadata
 #define MyAppExeName "mi-360.exe"
@@ -73,8 +74,8 @@ Filename: "{tmp}\vc_redist.exe"; Parameters: "/install /passive"; StatusMsg: "In
 
 ; Remove existing driver
 Filename: "{app}\{#DestDriversFolder}\devcon.exe"; Parameters: "remove Root\ViGEmBus"; Flags: runhidden runascurrentuser; StatusMsg: "Removing ViGEm Driver..."; Tasks: installdriver
-Filename: "{app}\{#DestDriversFolder}\devcon.exe"; Parameters: "remove Root\HidGuardian"; Flags: runhidden runascurrentuser; StatusMsg: "Removing HidGuardian Driver..."; Tasks: installdriver
 Filename: "{app}\{#DestDriversFolder}\devcon.exe"; Parameters: "classfilter HIDClass upper !HidGuardian"; Flags: runhidden runascurrentuser; StatusMsg: "Removing HidGuardian Driver Filter..."; Tasks: installdriver
+Filename: "{app}\{#DestDriversFolder}\devcon.exe"; Parameters: "remove Root\HidGuardian"; Flags: runhidden runascurrentuser; StatusMsg: "Removing HidGuardian Driver..."; Tasks: installdriver
 
 ; Install driver
 Filename: "{app}\{#DestDriversFolder}\devcon.exe"; Parameters: "install ""{app}\{#DestDriversFolder}\ViGEmBus.inf"" Root\ViGEmBus"; Flags: runhidden runascurrentuser; StatusMsg: "Installing ViGEm Driver..."; Tasks: installdriver
