@@ -55,7 +55,9 @@ namespace mi360
 
         public HidDevice Device => _Device;
 
-        public int LedNumber { get; private set; }
+        public ushort LedNumber { get; private set; }
+
+        public ushort BatteryLevel { get; private set; }
 
         public bool IsActive => _InputThread.IsAlive;
 
@@ -132,6 +134,29 @@ namespace mi360
 
                 var data = hidReport.Data;
 
+                /*
+                [0]  Buttons state, 1 bit per button
+                [1]  Buttons state, 1 bit per button
+                [2]  0x00
+                [3]  D-Pad
+                [4]  Left thumb, X axis
+                [5]  Left thumb, Y axis
+                [6]  Right thumb, X axis
+                [7]  Right thumb, Y axis
+                [8]  0x00
+                [9]  0x00
+                [10] L trigger
+                [11] R trigger
+                [12] Accelerometer axis 1
+                [13] Accelerometer axis 1
+                [14] Accelerometer axis 2
+                [15] Accelerometer axis 2
+                [16] Accelerometer axis 3
+                [17] Accelerometer axis 3
+                [18] Battery level
+                [19] MI button
+                 */
+
                 lock (_Report)
                 {
                     _Report.SetButtonState(Xbox360Buttons.A, GetBit(data[0], 0));
@@ -175,6 +200,9 @@ namespace mi360
                         _Report.SetButtonState((Xbox360Buttons)0x0400, true);
                         Task.Delay(200).ContinueWith(DelayedReleaseGuideButton);
                     }
+
+                    // Update battery level
+                    BatteryLevel = data[18];
 
                     _Target.SendReport(_Report);
                 }

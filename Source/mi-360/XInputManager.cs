@@ -36,6 +36,8 @@ namespace mi360
             _ViGEmClient.Dispose();
         }
 
+        public Dictionary<ushort, ushort> DeviceStatus => _Gamepads.ToDictionary(g => g.Value.LedNumber, g => g.Value.BatteryLevel);
+
         #region Methods
 
         public bool AddAndStart(string device)

@@ -56,6 +56,8 @@ namespace mi360
                     }
                 }
             };
+
+            _NotifyIcon.MouseMove += _NotifyIcon_MouseMove;
         }
 
         protected override void Dispose(bool disposing)
@@ -148,6 +150,24 @@ namespace mi360
                 message = args.ExceptionObject.ToString();
 
             MessageBox.Show("mi-360 has stopped working. The cause of the problem is:\n\n" + message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private void _NotifyIcon_MouseMove(object sender, MouseEventArgs e)
+        {
+            var lines = new List<string> { "Xiaomi Gamepad XInput manager" };
+
+            foreach (var s in _Manager.DeviceStatus)
+            {
+                if (s.Key > 4)
+                    continue;
+
+                var led = $"{ new string('\u25CB', s.Key) }\u25C9{ new string('\u25CB', 3 - s.Key) }";
+                var batt = s.Value > 0 ? $"{ s.Value }%" : "N/A";
+
+                lines.Add($"{ led } - Battery { batt }");
+            }
+
+            _NotifyIcon.Text = String.Join(Environment.NewLine, lines);
         }
 
         #endregion
