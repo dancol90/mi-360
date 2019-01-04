@@ -20,13 +20,15 @@ You can find all the needed files inside the Drivers directory.
 
 ### Drivers installation instructions
 
-- Install HidGuardian by following the instruction at https://github.com/nefarius/ViGEm/tree/master/Sys/HidGuardian
-- Install ViGem by following the instruction at https://github.com/nefarius/ViGEm/tree/master/Sys/ViGEmBus
+- Install HidGuardian by following the instruction at https://docs.vigem.org/#!hidguardian-v1-installation.md
+- Install ViGem by following one of this links:
+    - Easy setup: https://docs.vigem.org/#!vigem-bus-driver-installation.md
+    - Manual setup: https://docs.vigem.org/#!vigem-bus-driver-installation-caveman-edition.md
 
 ### Sources of the included files
 
-- ViGem drivers v1.13.0.0: https://downloads.vigem.org
-- devcon.exe utility: https://superuser.com/questions/1002950/quick-method-to-install-devcon-exe
+- ViGem drivers v1.14.3.0: https://downloads.vigem.org/.stable/latest/windows/x86_64/ViGEmBus_signed_Win7-10_x86_x64_latest.zip
+- devcon.exe utility: https://downloads.vigem.org/other/microsoft/devcon.zip
 
 ## HIDLibrary modifications
 
