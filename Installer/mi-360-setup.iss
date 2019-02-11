@@ -51,8 +51,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Application files
 Source: "{#BinaryPath}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinaryPath}\{#MyAppExeName}.config"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#BinaryPath}\HidLibrary.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#BinaryPath}\Nefarius.ViGEmClient.dll"; DestDir: "{app}"; Flags: ignoreversion
+;Source: "{#BinaryPath}\HidLibrary.dll"; DestDir: "{app}"; Flags: ignoreversion
+;Source: "{#BinaryPath}\Nefarius.ViGEmClient.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Drivers
 Source: "{#DriverPath}\x86\*"; DestDir: "{app}\{#DestDriversFolder}"; Flags: ignoreversion; Check: not IsWin64
