@@ -154,17 +154,27 @@ namespace mi360
 
         private void _NotifyIcon_MouseMove(object sender, MouseEventArgs e)
         {
-            var lines = new List<string> { "Xiaomi Gamepad XInput manager" };
+            var lines = new List<string> { "mi-360" };
 
-            foreach (var s in _Manager.DeviceStatus)
+            if (_Manager.DeviceStatus.Count == 1)
             {
-                if (s.Key > 4)
-                    continue;
+                var s = _Manager.DeviceStatus.First();
 
-                var led = $"{ new string('\u25CB', s.Key) }\u25C9{ new string('\u25CB', 3 - s.Key) }";
-                var batt = s.Value > 0 ? $"{ s.Value }%" : "N/A";
+                if (s.Key <= 4)
+                {
+                    var led = $"{ new string('\u25CB', s.Key) }\u25C9{ new string('\u25CB', 3 - s.Key) }";
+                    var batt = s.Value > 0 ? $"{ s.Value }%" : "N/A";
 
-                lines.Add($"{ led } - Battery { batt }");
+                    lines.Add($"{ led } - Battery { batt }");
+                }
+            }
+            else
+            {
+                foreach (var s in _Manager.DeviceStatus)
+                {
+                    var batt = s.Value > 0 ? $"{ s.Value }%" : "N/A";
+                    lines.Add($"{ s.Key }: { batt }");
+                }
             }
 
             _NotifyIcon.Text = String.Join(Environment.NewLine, lines);
