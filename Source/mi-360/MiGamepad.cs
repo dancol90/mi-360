@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HidLibrary;
+using mi360.Win32;
 using Nefarius.ViGEm.Client;
 using Nefarius.ViGEm.Client.Exceptions;
 using Nefarius.ViGEm.Client.Targets;
@@ -14,23 +15,22 @@ namespace mi360
 {
     class MiGamepad : IDisposable
     {
-        private static readonly Xbox360Buttons[][] HatSwitches = {
-            new [] { Xbox360Buttons.Up },
-            new [] { Xbox360Buttons.Up, Xbox360Buttons.Right },
-            new [] { Xbox360Buttons.Right },
-            new [] { Xbox360Buttons.Right, Xbox360Buttons.Down },
-            new [] { Xbox360Buttons.Down },
-            new [] { Xbox360Buttons.Down, Xbox360Buttons.Left },
-            new [] { Xbox360Buttons.Left },
-            new [] { Xbox360Buttons.Left, Xbox360Buttons.Up },
+        private static readonly Xbox360Button[][] HatSwitches = {
+            new [] { Xbox360Button.Up },
+            new [] { Xbox360Button.Up, Xbox360Button.Right },
+            new [] { Xbox360Button.Right },
+            new [] { Xbox360Button.Right, Xbox360Button.Down },
+            new [] { Xbox360Button.Down },
+            new [] { Xbox360Button.Down, Xbox360Button.Left },
+            new [] { Xbox360Button.Left },
+            new [] { Xbox360Button.Left, Xbox360Button.Up },
         };
 
         public event EventHandler Started;
         public event EventHandler Ended;
 
         private readonly HidDevice _Device;
-        private readonly Xbox360Controller _Target;
-        private readonly Xbox360Report _Report;
+        private readonly IXbox360Controller _Target;
         private readonly Thread _InputThread;
         private readonly CancellationTokenSource _CTS;
 
@@ -39,14 +39,14 @@ namespace mi360
             _Device = HidDevices.GetDevice(device);
             _Device.MonitorDeviceEvents = false;
 
-            _Target = new Xbox360Controller(client);
+            _Target = client.CreateXbox360Controller();
+            _Target.AutoSubmitReport = false;
             _Target.FeedbackReceived += Target_OnFeedbackReceived;
 
             // TODO mark the threads as background?
             _InputThread = new Thread(DeviceWorker);
 
             _CTS = new CancellationTokenSource();
-            _Report = new Xbox360Report();
 
             LedNumber = 0xFF;
         }
@@ -72,8 +72,6 @@ namespace mi360
 
             _Device.Dispose();
             _CTS.Dispose();
-
-            _Target.Dispose();
         }
 
         public void Start()
@@ -81,7 +79,7 @@ namespace mi360
             _InputThread.Start();
         }
 
-        public void Stop()
+        public void  Stop()
         {
             if (_CTS.IsCancellationRequested)
                 return;
@@ -157,60 +155,62 @@ namespace mi360
                 [19] MI button
                  */
 
-                lock (_Report)
+                lock (_Target)
                 {
-                    _Report.SetButtonState(Xbox360Buttons.A, GetBit(data[0], 0));
-                    _Report.SetButtonState(Xbox360Buttons.B, GetBit(data[0], 1));
-                    _Report.SetButtonState(Xbox360Buttons.X, GetBit(data[0], 3));
-                    _Report.SetButtonState(Xbox360Buttons.Y, GetBit(data[0], 4));
-                    _Report.SetButtonState(Xbox360Buttons.LeftShoulder, GetBit(data[0], 6));
-                    _Report.SetButtonState(Xbox360Buttons.RightShoulder, GetBit(data[0], 7));
+                    _Target.SetButtonState(Xbox360Button.A, GetBit(data[0], 0));
+                    _Target.SetButtonState(Xbox360Button.B, GetBit(data[0], 1));
+                    _Target.SetButtonState(Xbox360Button.X, GetBit(data[0], 3));
+                    _Target.SetButtonState(Xbox360Button.Y, GetBit(data[0], 4));
+                    _Target.SetButtonState(Xbox360Button.LeftShoulder, GetBit(data[0], 6));
+                    _Target.SetButtonState(Xbox360Button.RightShoulder, GetBit(data[0], 7));
 
-                    _Report.SetButtonState(Xbox360Buttons.Back, GetBit(data[1], 2));
-                    _Report.SetButtonState(Xbox360Buttons.Start, GetBit(data[1], 3));
-                    _Report.SetButtonState(Xbox360Buttons.LeftThumb, GetBit(data[1], 5));
-                    _Report.SetButtonState(Xbox360Buttons.RightThumb, GetBit(data[1], 6));
+                    _Target.SetButtonState(Xbox360Button.Back, GetBit(data[1], 2));
+                    _Target.SetButtonState(Xbox360Button.Start, GetBit(data[1], 3));
+                    _Target.SetButtonState(Xbox360Button.LeftThumb, GetBit(data[1], 5));
+                    _Target.SetButtonState(Xbox360Button.RightThumb, GetBit(data[1], 6));
 
                     // Reset Hat switch status, as is set to 15 (all directions set, impossible state)
-                    _Report.SetButtonState(Xbox360Buttons.Up, false);
-                    _Report.SetButtonState(Xbox360Buttons.Left, false);
-                    _Report.SetButtonState(Xbox360Buttons.Down, false);
-                    _Report.SetButtonState(Xbox360Buttons.Right, false);
+                    _Target.SetButtonState(Xbox360Button.Up, false);
+                    _Target.SetButtonState(Xbox360Button.Left, false);
+                    _Target.SetButtonState(Xbox360Button.Down, false);
+                    _Target.SetButtonState(Xbox360Button.Right, false);
 
                     if (data[3] < 8)
                     {
                         var btns = HatSwitches[data[3]];
                         // Hat Switch is a number from 0 to 7, where 0 is Up, 1 is Up-Left, etc.
-                        _Report.SetButtons(btns);
+                        foreach (var b in btns)
+                            _Target.SetButtonState(b, true);
                     }
 
                     // Analog axis
-                    _Report.SetAxis(Xbox360Axes.LeftThumbX, MapAnalog(data[4]));
-                    _Report.SetAxis(Xbox360Axes.LeftThumbY, MapAnalog(data[5], true));
-                    _Report.SetAxis(Xbox360Axes.RightThumbX, MapAnalog(data[6]));
-                    _Report.SetAxis(Xbox360Axes.RightThumbY, MapAnalog(data[7], true));
+                    _Target.SetAxisValue(Xbox360Axis.LeftThumbX, MapAnalog(data[4]));
+                    _Target.SetAxisValue(Xbox360Axis.LeftThumbY, MapAnalog(data[5], true));
+                    _Target.SetAxisValue(Xbox360Axis.RightThumbX, MapAnalog(data[6]));
+                    _Target.SetAxisValue(Xbox360Axis.RightThumbY, MapAnalog(data[7], true));
 
                     // Triggers
-                    _Report.SetAxis(Xbox360Axes.LeftTrigger, data[10]);
-                    _Report.SetAxis(Xbox360Axes.RightTrigger, data[11]);
+                    _Target.SetSliderValue(Xbox360Slider.LeftTrigger, data[10]);
+                    _Target.SetSliderValue(Xbox360Slider.RightTrigger, data[11]);
 
                     // Logo ("home") button
                     if (GetBit(data[19], 0))
                     {
-                        _Report.SetButtonState((Xbox360Buttons)0x0400, true);
+                        _Target.SetButtonState(Xbox360Button.Guide, true);
                         Task.Delay(200).ContinueWith(DelayedReleaseGuideButton);
                     }
 
                     // Update battery level
                     BatteryLevel = data[18];
 
-                    _Target.SendReport(_Report);
+                    _Target.SubmitReport();
                 }
+
             }
 
             // Disconnect the virtual Xbox360 gamepad
             // Let Dispose handle that, otherwise it will rise a NotPluggedIn exception
-            //_Target.Disconnect();
+            _Target.Disconnect();
 
             // Close the HID device
             _Device.CloseDevice();
@@ -239,10 +239,10 @@ namespace mi360
 
         private void DelayedReleaseGuideButton(Task t)
         {
-            lock (_Report)
+            lock (_Target)
             {
-                _Report.SetButtonState((Xbox360Buttons)0x0400, false);
-                _Target.SendReport(_Report);
+                _Target.SetButtonState(Xbox360Button.Guide, false);
+                _Target.SubmitReport();
             }
         }
 
