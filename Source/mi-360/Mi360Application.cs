@@ -25,8 +25,6 @@ namespace mi360
 
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            EnableHidGuardian();
-
             _Manager = new XInputManager();
             _Manager.GamepadRunning += Manager_GamepadRunning;
             _Manager.GamepadRemoved += Manager_GamepadRemoved;
@@ -79,32 +77,6 @@ namespace mi360
             _NotifyIcon.ShowBalloonTip(timeout);
         }
 
-        #region Hardware utilities
-
-        private void EnableHidGuardian()
-        {
-            // Temp
-            HidGuardian.ClearWhitelistedProcesses();
-            HidGuardian.ClearAffectedDevices();
-
-            HidGuardian.AddDeviceToAffectedList(XiaomiGamepadHardwareId);
-            HidGuardian.AddToWhitelist(Process.GetCurrentProcess().Id);
-
-            // Disable and reenable the device to let the driver hide the HID gamepad and show Xbox360 one
-            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
-        }
-
-        private void DisableHidGuardian()
-        {
-            HidGuardian.RemoveDeviceFromAffectedList(XiaomiGamepadHardwareId);
-            HidGuardian.RemoveFromWhitelist(Process.GetCurrentProcess().Id);
-
-            // Disable and reenable the device to let the driver hide the emulated gamepad and show the HID one again
-            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
-        }
-
-        #endregion
-
         #region Event Handlers
 
         private void Exit_OnClick(object sender, EventArgs eventArgs)
@@ -115,7 +87,6 @@ namespace mi360
         private void Application_ApplicationExit(object sender, EventArgs eventArgs)
         {
             _NotifyIcon.Visible = false;
-            DisableHidGuardian();
         }
 
         private void Monitor_DeviceAttached(object sender, string s)

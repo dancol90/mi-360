@@ -92,8 +92,10 @@ namespace mi360
         {
             Console.WriteLine("Starting worker thread for {0}", _Device.ToString());
 
+            DeviceStateManager.DisableReEnableDevice(_Device.DevicePath);
+
             // Open HID device to read input from the gamepad
-            _Device.OpenDevice(DeviceMode.Overlapped, DeviceMode.Overlapped, ShareMode.ShareRead | ShareMode.ShareWrite);
+            _Device.OpenDevice(DeviceMode.Overlapped, DeviceMode.Overlapped, ShareMode.Exclusive);
 
             // Init Xiaomi Gamepad vibration
             _Device.WriteFeatureData(new byte[] {0x20, 0x00, 0x00});
@@ -214,6 +216,8 @@ namespace mi360
 
             // Close the HID device
             _Device.CloseDevice();
+
+            DeviceStateManager.DisableReEnableDevice(_Device.DevicePath);
 
             Console.WriteLine("Exiting worker thread for {0}", _Device.ToString());
             Ended?.Invoke(this, EventArgs.Empty);

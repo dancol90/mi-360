@@ -64,7 +64,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HidGuardian.cs" />
     <Compile Include="Mi360Application.cs" />
     <Compile Include="MiGamepad.cs" />
     <Compile Include="Program.cs" />
