@@ -124,6 +124,9 @@ namespace mi360
 
         private void _NotifyIcon_MouseMove(object sender, MouseEventArgs e)
         {
+            if (_Manager == null)
+                return;
+
             var lines = new List<string> { "mi-360" };
 
             if (_Manager.DeviceStatus.Count == 1)
