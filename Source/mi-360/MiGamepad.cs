@@ -90,12 +90,20 @@ namespace mi360
             _InputThread.Join();
         }
 
+        public void DisableReEnableDevice()
+        {
+            try { _Device.SetState(false); }
+            catch { }
+
+            try { _Device.SetState(true); }
+            catch { }
+        }
+
         private void DeviceWorker()
         {
             Console.WriteLine("Starting worker thread for {0}", _Device.ToString());
 
-            // FIXME Use _Device.DevicePath to disable-renable the right HW instance in case of multiple connected gamepads 
-            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
+            DisableReEnableDevice();
 
             // Open HID device to read input from the gamepad
             _Device.OpenDevice(DeviceMode.Overlapped, DeviceMode.Overlapped, ShareMode.Exclusive);
@@ -220,8 +228,7 @@ namespace mi360
             // Close the HID device
             _Device.CloseDevice();
 
-            // FIXME Use _Device.DevicePath to disable-renable the right HW instance in case of multiple connected gamepads 
-            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
+            DisableReEnableDevice();
 
             Console.WriteLine("Exiting worker thread for {0}", _Device.ToString());
             Ended?.Invoke(this, EventArgs.Empty);
