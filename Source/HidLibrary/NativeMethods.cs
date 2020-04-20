@@ -78,7 +78,12 @@ namespace HidLibrary
 	    internal const short DIGCF_DEVICEINTERFACE = 0x10;
 	    internal const int DIGCF_ALLCLASSES = 0x4;
 
-	    internal const int MAX_DEV_LEN = 1000;
+        internal const int DIF_PROPERTYCHANGE = 0x12;
+        internal const int DICS_ENABLE = 1;
+        internal const int DICS_DISABLE = 2; // disable device
+        internal const int DICS_FLAG_GLOBAL = 1; // not profile-specific
+
+        internal const int MAX_DEV_LEN = 1000;
 	    internal const int SPDRP_ADDRESS = 0x1c;
 	    internal const int SPDRP_BUSNUMBER = 0x15;
 	    internal const int SPDRP_BUSTYPEGUID = 0x13;
@@ -185,6 +190,22 @@ namespace HidLibrary
             public ulong pid;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SP_CLASSINSTALL_HEADER
+        {
+            public int cbSize;
+            public int InstallFunction;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SP_PROPCHANGE_PARAMS
+        {
+            public SP_CLASSINSTALL_HEADER ClassInstallHeader;
+            public int StateChange;
+            public int Scope;
+            public int HwProfile;
+        }
+
         internal static DEVPROPKEY DEVPKEY_Device_BusReportedDeviceDesc = 
             new DEVPROPKEY { fmtid = new Guid(0x540b947e, 0x8b40, 0x45bc, 0xa8, 0xa2, 0x6a, 0x0b, 0x89, 0x4c, 0xbd, 0xa2), pid = 4 };
 
@@ -218,7 +239,19 @@ namespace HidLibrary
 	    [DllImport("setupapi.dll", CharSet = CharSet.Auto)]
 	    static internal extern bool SetupDiGetDeviceInterfaceDetail(IntPtr deviceInfoSet, ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData, int deviceInterfaceDetailDataSize, ref int requiredSize, IntPtr deviceInfoData);
 
-	    [DllImport("user32.dll")]
+        [DllImport("setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool SetupDiSetClassInstallParams(
+            IntPtr deviceInfoSet,
+            [In] ref SP_DEVINFO_DATA deviceInfoData,
+            [In] ref SP_PROPCHANGE_PARAMS classInstallParams,
+            UInt32 ClassInstallParamsSize);
+
+        [DllImport("setupapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool SetupDiChangeState(
+            IntPtr deviceInfoSet,
+            [In] ref SP_DEVINFO_DATA deviceInfoData);
+
+        [DllImport("user32.dll")]
 	    static internal extern bool UnregisterDeviceNotification(IntPtr handle);
 
 	    internal const short HIDP_INPUT = 0;

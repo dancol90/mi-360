@@ -441,6 +441,15 @@ namespace HidLibrary
             return success;
         }
 
+        public void SetState(bool enabled)
+        {
+            if (!HidDevices.SetDeviceState(_devicePath, enabled))
+            {
+                var verb = enabled ? "enable" : "disable";
+                throw new Exception($"Cannot {verb} the device");
+            }
+        }
+
         protected static void EndRead(IAsyncResult ar)
         {
             var hidAsyncState = (HidAsyncState)ar.AsyncState;
