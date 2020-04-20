@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HidLibrary;
+using System.Threading;
 using Nefarius.ViGEm.Client;
 
 namespace mi360
@@ -16,10 +14,14 @@ namespace mi360
         private Dictionary<string, MiGamepad> _Gamepads;
         private ViGEmClient _ViGEmClient;
 
+        private SynchronizationContext _SyncContext;
+
         public XInputManager()
         {
             _ViGEmClient = new ViGEmClient();
             _Gamepads = new Dictionary<string, MiGamepad>();
+
+            _SyncContext = SynchronizationContext.Current;
         }
 
         public void Dispose()
@@ -83,14 +85,18 @@ namespace mi360
 
         private void Gamepad_Ended(object sender, EventArgs eventArgs)
         {
-            var gamepad = sender as MiGamepad;
-            StopAndRemove(gamepad.Device.DevicePath);
-            GamepadRemoved?.Invoke(this, EventArgs.Empty);
+            _SyncContext.Post(o =>
+            {
+                var gamepad = sender as MiGamepad;
+                StopAndRemove(gamepad.Device.DevicePath);
+
+                GamepadRemoved?.Invoke(this, EventArgs.Empty);
+            }, null);
         }
 
         private void Gamepad_Started(object sender, EventArgs eventArgs)
         {
-            GamepadRunning?.Invoke(this, EventArgs.Empty);
+            _SyncContext.Post(o => GamepadRunning?.Invoke(this, EventArgs.Empty), null);
         }
     }
 }
