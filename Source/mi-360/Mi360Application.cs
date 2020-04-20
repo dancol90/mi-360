@@ -12,7 +12,6 @@ namespace mi360
 {
     class Mi360Application : ApplicationContext
     {
-        private static string XiaomiGamepadHardwareId = @"HID\{00001124-0000-1000-8000-00805f9b34fb}_VID&00022717_PID&3144";
         private static string XiaomiGamepadHardwareFilter = @"VID&00022717_PID&3144";
 
         private NotifyIcon _NotifyIcon;

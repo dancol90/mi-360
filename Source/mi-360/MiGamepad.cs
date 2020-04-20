@@ -15,6 +15,8 @@ namespace mi360
 {
     class MiGamepad : IDisposable
     {
+        private static string XiaomiGamepadHardwareId = @"HID\{00001124-0000-1000-8000-00805f9b34fb}_VID&00022717_PID&3144";
+
         private static readonly Xbox360Button[][] HatSwitches = {
             new [] { Xbox360Button.Up },
             new [] { Xbox360Button.Up, Xbox360Button.Right },
@@ -92,7 +94,8 @@ namespace mi360
         {
             Console.WriteLine("Starting worker thread for {0}", _Device.ToString());
 
-            DeviceStateManager.DisableReEnableDevice(_Device.DevicePath);
+            // FIXME Use _Device.DevicePath to disable-renable the right HW instance in case of multiple connected gamepads 
+            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
 
             // Open HID device to read input from the gamepad
             _Device.OpenDevice(DeviceMode.Overlapped, DeviceMode.Overlapped, ShareMode.Exclusive);
@@ -217,7 +220,8 @@ namespace mi360
             // Close the HID device
             _Device.CloseDevice();
 
-            DeviceStateManager.DisableReEnableDevice(_Device.DevicePath);
+            // FIXME Use _Device.DevicePath to disable-renable the right HW instance in case of multiple connected gamepads 
+            DeviceStateManager.DisableReEnableDevice(XiaomiGamepadHardwareId);
 
             Console.WriteLine("Exiting worker thread for {0}", _Device.ToString());
             Ended?.Invoke(this, EventArgs.Empty);
