@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 using HidLibrary;
 using mi360.Win32;
 using Nefarius.ViGEm.Client;
@@ -16,6 +17,8 @@ namespace mi360
     class MiGamepad : IDisposable
     {
         private static string XiaomiGamepadHardwareId = @"HID\{00001124-0000-1000-8000-00805f9b34fb}_VID&00022717_PID&3144";
+
+        private ILogger _Logger = Log.ForContext<MiGamepad>();
 
         private static readonly Xbox360Button[][] HatSwitches = {
             new [] { Xbox360Button.Up },
@@ -38,6 +41,8 @@ namespace mi360
 
         public MiGamepad(string device, ViGEmClient client)
         {
+            _Logger.Information("Initializing MiGamepad handler for device {Device}", device);
+
             _Device = HidDevices.GetDevice(device);
             _Device.MonitorDeviceEvents = false;
 
@@ -69,6 +74,8 @@ namespace mi360
 
         public void Dispose()
         {
+            _Logger.Information("Deinitializing MiGamepad handler for device {Device}", _Device);
+
             if (_InputThread.IsAlive)
                 Stop();
 
@@ -81,31 +88,38 @@ namespace mi360
             _InputThread.Start();
         }
 
-        public void  Stop()
+        public void Stop()
         {
             if (_CTS.IsCancellationRequested)
+            {
+                _Logger.Information("Thread stop for {Device} already requested", _Device.DevicePath);
                 return;
+            }
 
+            _Logger.Information("Requesting thread stop for {Device}", _Device);
             _CTS.Cancel();
             _InputThread.Join();
         }
 
         public void DisableReEnableDevice()
         {
+            _Logger.Information("Disabling gamepad {Device}", _Device);
             try { _Device.SetState(false); }
             catch { }
 
+            _Logger.Information("Enabling gamepad {Device}", _Device);
             try { _Device.SetState(true); }
             catch { }
         }
 
         private void DeviceWorker()
         {
-            Console.WriteLine("Starting worker thread for {0}", _Device.ToString());
+            _Logger.Information("Starting worker thread for {Device}", _Device);
 
             DisableReEnableDevice();
 
             // Open HID device to read input from the gamepad
+            _Logger.Information("Opening HID device {Device}", _Device);
             _Device.OpenDevice(DeviceMode.Overlapped, DeviceMode.Overlapped, ShareMode.Exclusive);
 
             // Init Xiaomi Gamepad vibration
@@ -114,10 +128,12 @@ namespace mi360
             // Connect the virtual Xbox360 gamepad
             try
             {
+                _Logger.Information("Connecting to ViGEm client");
                 _Target.Connect();
             }
             catch (VigemAlreadyConnectedException e)
             {
+                _Logger.Error(e, "Error while connecting to ViGEm");
                 _Target.Disconnect();
                 _Target.Connect();
             }
@@ -139,7 +155,7 @@ namespace mi360
                     continue;
                 else if (hidReport.ReadStatus != HidDeviceData.ReadStatus.Success)
                 {
-                    Console.WriteLine("Device {0}: error while reading HID report, {1}", _Device.ToString(), hidReport.ReadStatus.ToString());
+                    _Logger.Error("Cannot read HID report for device {Device}, got {Report}", _Device, hidReport.ReadStatus);
                     break;
                 }
 
@@ -223,14 +239,16 @@ namespace mi360
 
             // Disconnect the virtual Xbox360 gamepad
             // Let Dispose handle that, otherwise it will rise a NotPluggedIn exception
+            _Logger.Information("Disconnecting ViGEm client");
             _Target.Disconnect();
 
             // Close the HID device
+            _Logger.Information("Closing HID device {Device}", _Device);
             _Device.CloseDevice();
 
             DisableReEnableDevice();
 
-            Console.WriteLine("Exiting worker thread for {0}", _Device.ToString());
+            _Logger.Information("Exiting worker thread for {0}", _Device.ToString());
             Ended?.Invoke(this, EventArgs.Empty);
         }
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 using HidLibrary;
 
 namespace mi360.Win32
@@ -15,6 +16,8 @@ namespace mi360.Win32
         public event EventHandler<string> DeviceAttached;
         public event EventHandler<string> DeviceRemoved;
 
+        private ILogger _Logger = Log.ForContext<HidMonitor>();
+
         private Timer _MonitorTimer;
         private string _Filter;
         private string[] _SeenDevices;
@@ -25,6 +28,8 @@ namespace mi360.Win32
 
         public HidMonitor(string filter)
         {
+            _Logger.Information("Initializing HID device monitor with filter {Filter}", filter);
+
             _Filter = filter;
             _MonitorTimer = new Timer(SearchForDevice);
 
@@ -37,11 +42,13 @@ namespace mi360.Win32
 
         public void Start()
         {
+            _Logger.Information("Start monitoring for filter {Filter}", _Filter);
             _MonitorTimer.Change(0, 5000);
         }
 
         public void Stop()
         {
+            _Logger.Information("Stop monitoring for filter {Filter}", _Filter);
             _MonitorTimer.Change(Timeout.Infinite, Timeout.Infinite);
         }
 
@@ -58,10 +65,16 @@ namespace mi360.Win32
             var removedDevices = _SeenDevices.Except(devices);
 
             foreach (var device in newDevices)
+            {
+                _Logger.Information("Detected attached HID devices matching filter {Filter}", _Filter);
                 DeviceAttached?.Invoke(this, device);
+            }
 
             foreach (var device in removedDevices)
+            {
+                _Logger.Information("Detected removed HID devices matching filter {Filter}", _Filter);
                 DeviceRemoved?.Invoke(this, device);
+            }
 
             _SeenDevices = devices;
         }
@@ -72,6 +85,7 @@ namespace mi360.Win32
 
         public void Dispose()
         {
+            _Logger.Information("Deinitilizing HID monitor for {Filter}", _Filter);
             _MonitorTimer.Dispose();
         }
 

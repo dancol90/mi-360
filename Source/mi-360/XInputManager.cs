@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Serilog;
 using Nefarius.ViGEm.Client;
 
 namespace mi360
@@ -11,6 +12,8 @@ namespace mi360
         public event EventHandler GamepadRunning;
         public event EventHandler GamepadRemoved;
 
+        private ILogger _Logger = Log.ForContext<XInputManager>();
+
         private Dictionary<string, MiGamepad> _Gamepads;
         private ViGEmClient _ViGEmClient;
 
@@ -18,6 +21,7 @@ namespace mi360
 
         public XInputManager()
         {
+            _Logger.Information("Initializing ViGEm client");
             _ViGEmClient = new ViGEmClient();
             _Gamepads = new Dictionary<string, MiGamepad>();
 
@@ -26,6 +30,8 @@ namespace mi360
 
         public void Dispose()
         {
+            _Logger.Information("Cleaning up running gamepads");
+
             // When calling Stop() the device will get removed from the dictionary, do this to avoid exceptions in enumeration
             var devices = _Gamepads.Values.ToArray();
 
@@ -35,6 +41,7 @@ namespace mi360
                 device.Dispose();
             }
 
+            _Logger.Information("Deinitializing ViGEm client");
             _ViGEmClient.Dispose();
         }
 
@@ -45,14 +52,19 @@ namespace mi360
         public bool AddAndStart(string device)
         {
             if (Contains(device))
+            {
+                _Logger.Warning("Requested additiong of already existing device {Device}", device);
                 return false;
+            }
 
+            _Logger.Information("Adding device {Device}", device);
             var gamepad = new MiGamepad(device, _ViGEmClient);
             _Gamepads.Add(device, gamepad);
 
             gamepad.Started += Gamepad_Started;
             gamepad.Ended += Gamepad_Ended;
 
+            _Logger.Information("Starting {Device}", device);
             gamepad.Start();
 
             return true;
@@ -61,16 +73,21 @@ namespace mi360
         public void StopAndRemove(string device)
         {
             if (!Contains(device))
+            {
+                _Logger.Warning("Requested removal of non-existing device {Device}", device);
                 return;
+            }
             
             var gamepad = _Gamepads[device];
 
+            _Logger.Information("Stopping device {Device}", device);
             if (gamepad.IsActive)
                 gamepad.Stop();
 
             gamepad.Started -= Gamepad_Started;
             gamepad.Ended -= Gamepad_Ended;
 
+            _Logger.Information("Deinitializing and removing device {Device}", device);
             gamepad.Dispose();
 
             _Gamepads.Remove(device);

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
+using Serilog;
 using mi360.Properties;
 using mi360.Win32;
 
@@ -13,6 +14,8 @@ namespace mi360
     class Mi360Application : ApplicationContext
     {
         private static string XiaomiGamepadHardwareFilter = @"VID&00022717_PID&3144";
+
+        private ILogger _Logger = Log.ForContext<Mi360Application>();
 
         private NotifyIcon _NotifyIcon;
         private IMonitor _Monitor;
@@ -32,12 +35,16 @@ namespace mi360
             _Monitor.DeviceAttached += Monitor_DeviceAttached;
             _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
             _Monitor.Start();
+
+            _Logger.Information("mi-360 is running");
         }
 
         #region Initialization/Cleanup methods
 
         private void InitializeComponents()
         {
+            _Logger.Information("Initializing resources");
+
             Application.ApplicationExit += Application_ApplicationExit;
 
             _NotifyIcon = new NotifyIcon()
@@ -59,6 +66,8 @@ namespace mi360
 
         protected override void Dispose(bool disposing)
         {
+            _Logger.Information("Deinitializing resources");
+
             _Monitor.Stop();
             _Monitor.Dispose();
 
@@ -71,6 +80,8 @@ namespace mi360
 
         private void ShowNotification(string title, string message, int timeout = 2000)
         {
+            _Logger.Debug("Notifying user: {Title} - {Message}", title, message);
+
             _NotifyIcon.BalloonTipTitle = title;
             _NotifyIcon.BalloonTipText = message;
             _NotifyIcon.ShowBalloonTip(timeout);
@@ -80,6 +91,7 @@ namespace mi360
 
         private void Exit_OnClick(object sender, EventArgs eventArgs)
         {
+            _Logger.Information("Exiting");
             Application.Exit();
         }
 
@@ -90,23 +102,25 @@ namespace mi360
 
         private void Monitor_DeviceAttached(object sender, string s)
         {
-            Console.WriteLine("HID Connected: " + s);
+            _Logger.Information("New HID device connected: {Device}", s);
             _Manager.AddAndStart(s);
         }
 
         private void Monitor_DeviceRemoved(object sender, string s)
         {
-            Console.WriteLine("HID Disconnected: " + s);
+            _Logger.Information("HID device disconnected: {Device}", s);
             _Manager.StopAndRemove(s);
         }
 
         private void Manager_GamepadRemoved(object sender, EventArgs eventArgs)
         {
+            _Logger.Information("XInput gamepad disconnected");
             ShowNotification("Gamepad disconnected", "A gamepad has disconnected and is not available anymore.");
         }
 
         private void Manager_GamepadRunning(object sender, EventArgs eventArgs)
         {
+            _Logger.Information("XInput gamepad connected");
             ShowNotification("Gamepad connected", "A new gamepad is now available as XInput device.");
         }
 
@@ -119,6 +133,7 @@ namespace mi360
             else
                 message = args.ExceptionObject.ToString();
 
+            _Logger.Error("Unhandled exception: {Exception}", args.ExceptionObject);
             MessageBox.Show("mi-360 has stopped working. The cause of the problem is:\n\n" + message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
