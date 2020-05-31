@@ -47,6 +47,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#BinaryPath}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinaryPath}\HidLibrary.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinaryPath}\Nefarius.ViGEm.Client.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BinaryPath}\Serilog.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BinaryPath}\Serilog.Sinks.Console.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BinaryPath}\Serilog.Sinks.File.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BinaryPath}\{#MyAppExeName}.config"; DestDir: "{app}"; Flags: ignoreversion
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
