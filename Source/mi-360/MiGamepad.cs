@@ -38,6 +38,7 @@ namespace mi360
         private readonly IXbox360Controller _Target;
         private readonly Thread _InputThread;
         private readonly CancellationTokenSource _CTS;
+        private readonly Timer _VibrationTimer;
 
         public MiGamepad(string device, ViGEmClient client)
         {
@@ -54,6 +55,7 @@ namespace mi360
             _InputThread = new Thread(DeviceWorker);
 
             _CTS = new CancellationTokenSource();
+            _VibrationTimer = new Timer(VibrationTimer_Trigger);
 
             LedNumber = 0xFF;
         }
@@ -283,14 +285,36 @@ namespace mi360
 
         #region Event Handlers
 
+        private void VibrationTimer_Trigger(object o)
+        {
+            Task.Run(() => {
+                lock (_VibrationTimer)
+                {
+                    if (_Device.IsOpen)
+                        _Device.WriteFeatureData(new byte[] { 0x20, 0x00, 0x00 });
+
+                    _Logger.Information("Vibration feedback reset after 3 seconds for {Device}", _Device);
+                }
+            });
+        }
+
         private void Target_OnFeedbackReceived(object sender, Xbox360FeedbackReceivedEventArgs e)
         {
             byte[] data = { 0x20, e.SmallMotor, e.LargeMotor };
 
-            Task.Run(() =>
-            {
-                if (_Device.IsOpen)
+            Task.Run(() => {
+
+                lock (_VibrationTimer)
+                {
+                    if (!_Device.IsOpen)
+                        return;
+
                     _Device.WriteFeatureData(data);
+                }
+
+                var timeout = e.SmallMotor > 0 || e.LargeMotor > 0 ? 3000 : Timeout.Infinite;
+                _VibrationTimer.Change(timeout, Timeout.Infinite);
+                
             });
 
             if (LedNumber != e.LedNumber)
