@@ -281,14 +281,7 @@ namespace mi360
 
         private short MapAnalog(byte value, bool invert = false)
         {
-            // Value is in range 0-255
-            // Clip it in range -127;127
-            var centered = Math.Max(-127, value - 128);
-
-            if (invert)
-                centered = -centered;
-
-            return (short)(32767 * centered / 127);
+            return (short)(value * 257 * (invert ? -1 : 1) + short.MinValue);
         }
 
         private void DelayedReleaseGuideButton(Task t)
