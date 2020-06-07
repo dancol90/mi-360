@@ -53,7 +53,7 @@ namespace mi360
         {
             if (Contains(device))
             {
-                _Logger.Warning("Requested additiong of already existing device {Device}", device);
+                _Logger.Warning("Requested addition of already existing device {Device}", device);
                 return false;
             }
 
