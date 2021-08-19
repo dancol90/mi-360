@@ -1,6 +1,6 @@
 # HIDLibrary
 
-## Modified from [HIDLibrary by Mike O'Brien](https://github.com/mikeobrien/HidLibrary)
+### Modified from [HIDLibrary by Mike O'Brien](https://github.com/mikeobrien/HidLibrary)
 
 ### Custom changes:
 
