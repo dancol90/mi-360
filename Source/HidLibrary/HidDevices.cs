@@ -85,7 +85,7 @@ namespace HidLibrary
             return true;
         }
 
-        internal class DeviceInfo { public string Path { get; set; } public string Description { get; set; } }
+        public class DeviceInfo { public string Path { get; set; } public string Description { get; set; } }
 
         internal class DeviceInterfaceInfo
         {
@@ -93,9 +93,9 @@ namespace HidLibrary
             internal NativeMethods.SP_DEVINFO_DATA DeviceInfoData;
             internal NativeMethods.SP_DEVICE_INTERFACE_DATA DeviceInterfaceData;
             internal int DeviceInterfaceIndex;
-        };
+        }
 
-        internal static IEnumerable<DeviceInfo> EnumerateDevices()
+        public static IEnumerable<DeviceInfo> EnumerateDevices()
         {
             return EnumerateDevicesInterfaces().Select(ei => { 
                 var devicePath = GetDevicePath(ei.DeviceInfoSet, ei.DeviceInterfaceData);

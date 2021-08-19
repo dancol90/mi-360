@@ -13,6 +13,8 @@ namespace mi360
 {
     class Mi360Application : ApplicationContext
     {
+        private static string XiaomiGamepadHardwareFilter = @"VID&00022717_PID&3144";
+
         private ILogger _Logger = Log.ForContext<Mi360Application>();
 
         private NotifyIcon _NotifyIcon;
@@ -29,7 +31,7 @@ namespace mi360
             _Manager.GamepadRunning += Manager_GamepadRunning;
             _Manager.GamepadRemoved += Manager_GamepadRemoved;
 
-            _Monitor = new HidMonitor(0x2717, 0x3144);
+            _Monitor = new HidMonitor(XiaomiGamepadHardwareFilter);
             _Monitor.DeviceAttached += Monitor_DeviceAttached;
             _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
             _Monitor.Start();
