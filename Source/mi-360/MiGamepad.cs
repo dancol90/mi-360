@@ -112,7 +112,7 @@ namespace mi360
                 _Logger.Error("Cannot disable device {Device}", _Device);
 
             _Logger.Information("Enabling gamepad {Device}", _Device);
-            if (_Device.SetState(true))
+            if (!_Device.SetState(true))
                 _Logger.Error("Cannot enable device {Device}", _Device);
         }
 
@@ -131,144 +131,144 @@ namespace mi360
             if (!_Device.IsOpen)
             {
                 _Logger.Warning("Cannot access HID device in exclusive mode, retrying in shared mode: {Device}", _Device);
+                
                 _Device.OpenDevice(DeviceMode.Overlapped, DeviceMode.Overlapped, ShareMode.ShareRead | ShareMode.ShareWrite);
                 ExclusiveMode = false;
+
+                if (!_Device.IsOpen)
+                {
+                    _Logger.Error("Cannot open HID device {Device}", _Device);
+                    _Device.CloseDevice();
+                    Ended?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
             }
 
-            if (_Device.IsOpen)
+            // Init Xiaomi Gamepad vibration
+            _Device.WriteFeatureData(new byte[] { 0x20, 0x00, 0x00 });
+
+            // Connect the virtual Xbox360 gamepad
+            try
             {
-                // Init Xiaomi Gamepad vibration
-                _Device.WriteFeatureData(new byte[] { 0x20, 0x00, 0x00 });
-
-                // Connect the virtual Xbox360 gamepad
-                try
-                {
-                    _Logger.Information("Connecting to ViGEm client");
-                    _Target.Connect();
-                }
-                catch (VigemAlreadyConnectedException e)
-                {
-                    _Logger.Warning(e, "ViGEm client was already opened, closing and reopening it");
-                    _Target.Disconnect();
-                    _Target.Connect();
-                }
-
-                Started?.Invoke(this, EventArgs.Empty);
-
-                HidReport hidReport;
-
-                while (!_CTS.Token.IsCancellationRequested)
-                {
-                    // Is device has been closed, exit the loop
-                    if (!_Device.IsOpen)
-                        break;
-
-                    // Otherwise read a report
-                    hidReport = _Device.ReadReport(1000);
-
-                    if (hidReport.ReadStatus == HidDeviceData.ReadStatus.WaitTimedOut)
-                        continue;
-                    else if (hidReport.ReadStatus != HidDeviceData.ReadStatus.Success)
-                    {
-                        _Logger.Error("Cannot read HID report for device {Device}, got {Report}", _Device, hidReport.ReadStatus);
-                        break;
-                    }
-
-                    var data = hidReport.Data;
-
-                    /*
-                    [0]  Buttons state, 1 bit per button
-                    [1]  Buttons state, 1 bit per button
-                    [2]  0x00
-                    [3]  D-Pad
-                    [4]  Left thumb, X axis
-                    [5]  Left thumb, Y axis
-                    [6]  Right thumb, X axis
-                    [7]  Right thumb, Y axis
-                    [8]  0x00
-                    [9]  0x00
-                    [10] L trigger
-                    [11] R trigger
-                    [12] Accelerometer axis 1
-                    [13] Accelerometer axis 1
-                    [14] Accelerometer axis 2
-                    [15] Accelerometer axis 2
-                    [16] Accelerometer axis 3
-                    [17] Accelerometer axis 3
-                    [18] Battery level
-                    [19] MI button
-                     */
-
-                    lock (_Target)
-                    {
-                        _Target.SetButtonState(Xbox360Button.A, GetBit(data[0], 0));
-                        _Target.SetButtonState(Xbox360Button.B, GetBit(data[0], 1));
-                        _Target.SetButtonState(Xbox360Button.X, GetBit(data[0], 3));
-                        _Target.SetButtonState(Xbox360Button.Y, GetBit(data[0], 4));
-                        _Target.SetButtonState(Xbox360Button.LeftShoulder, GetBit(data[0], 6));
-                        _Target.SetButtonState(Xbox360Button.RightShoulder, GetBit(data[0], 7));
-
-                        _Target.SetButtonState(Xbox360Button.Back, GetBit(data[1], 2));
-                        _Target.SetButtonState(Xbox360Button.Start, GetBit(data[1], 3));
-                        _Target.SetButtonState(Xbox360Button.LeftThumb, GetBit(data[1], 5));
-                        _Target.SetButtonState(Xbox360Button.RightThumb, GetBit(data[1], 6));
-
-                        // Reset Hat switch status, as is set to 15 (all directions set, impossible state)
-                        _Target.SetButtonState(Xbox360Button.Up, false);
-                        _Target.SetButtonState(Xbox360Button.Left, false);
-                        _Target.SetButtonState(Xbox360Button.Down, false);
-                        _Target.SetButtonState(Xbox360Button.Right, false);
-
-                        if (data[3] < 8)
-                        {
-                            var btns = HatSwitches[data[3]];
-                            // Hat Switch is a number from 0 to 7, where 0 is Up, 1 is Up-Left, etc.
-                            foreach (var b in btns)
-                                _Target.SetButtonState(b, true);
-                        }
-
-                        // Analog axis
-                        _Target.SetAxisValue(Xbox360Axis.LeftThumbX, MapAnalog(data[4]));
-                        _Target.SetAxisValue(Xbox360Axis.LeftThumbY, MapAnalog(data[5], true));
-                        _Target.SetAxisValue(Xbox360Axis.RightThumbX, MapAnalog(data[6]));
-                        _Target.SetAxisValue(Xbox360Axis.RightThumbY, MapAnalog(data[7], true));
-
-                        // Triggers
-                        _Target.SetSliderValue(Xbox360Slider.LeftTrigger, data[10]);
-                        _Target.SetSliderValue(Xbox360Slider.RightTrigger, data[11]);
-
-                        // Logo ("home") button
-                        if (GetBit(data[19], 0))
-                        {
-                            _Target.SetButtonState(Xbox360Button.Guide, true);
-                            Task.Delay(200).ContinueWith(DelayedReleaseGuideButton);
-                        }
-
-                        // Update battery level
-                        BatteryLevel = data[18];
-
-                        _Target.SubmitReport();
-                    }
-
-                }
-
-                // Disconnect the virtual Xbox360 gamepad
-                // Let Dispose handle that, otherwise it will rise a NotPluggedIn exception
-                _Logger.Information("Disconnecting ViGEm client");
+                _Logger.Information("Connecting to ViGEm client");
+                _Target.Connect();
+            }
+            catch (VigemAlreadyConnectedException e)
+            {
+                _Logger.Warning(e, "ViGEm client was already opened, closing and reopening it");
                 _Target.Disconnect();
-
-                // Close the HID device
-                _Logger.Information("Closing HID device {Device}", _Device);
-                _Device.CloseDevice();
-
-                DisableReEnableDevice();
+                _Target.Connect();
             }
-            else
+
+            Started?.Invoke(this, EventArgs.Empty);
+
+            HidReport hidReport;
+
+            while (!_CTS.Token.IsCancellationRequested)
             {
-                _Logger.Error("Cannot open HID device {Device}", _Device);
-                Ended?.Invoke(this, EventArgs.Empty);
-                return;
+                // Is device has been closed, exit the loop
+                if (!_Device.IsOpen)
+                    break;
+
+                // Otherwise read a report
+                hidReport = _Device.FastReadReport(1000);
+
+                if (hidReport.ReadStatus == HidDeviceData.ReadStatus.WaitTimedOut)
+                    continue;
+                else if (hidReport.ReadStatus != HidDeviceData.ReadStatus.Success)
+                {
+                    _Logger.Error("Cannot read HID report for device {Device}, got {Report}", _Device, hidReport.ReadStatus);
+                    break;
+                }
+
+                var data = hidReport.Data;
+
+                /*
+                [0]  Buttons state, 1 bit per button
+                [1]  Buttons state, 1 bit per button
+                [2]  0x00
+                [3]  D-Pad
+                [4]  Left thumb, X axis
+                [5]  Left thumb, Y axis
+                [6]  Right thumb, X axis
+                [7]  Right thumb, Y axis
+                [8]  0x00
+                [9]  0x00
+                [10] L trigger
+                [11] R trigger
+                [12] Accelerometer axis 1
+                [13] Accelerometer axis 1
+                [14] Accelerometer axis 2
+                [15] Accelerometer axis 2
+                [16] Accelerometer axis 3
+                [17] Accelerometer axis 3
+                [18] Battery level
+                [19] MI button
+                    */
+
+                lock (_Target)
+                {
+                    _Target.SetButtonState(Xbox360Button.A, GetBit(data[0], 0));
+                    _Target.SetButtonState(Xbox360Button.B, GetBit(data[0], 1));
+                    _Target.SetButtonState(Xbox360Button.X, GetBit(data[0], 3));
+                    _Target.SetButtonState(Xbox360Button.Y, GetBit(data[0], 4));
+                    _Target.SetButtonState(Xbox360Button.LeftShoulder, GetBit(data[0], 6));
+                    _Target.SetButtonState(Xbox360Button.RightShoulder, GetBit(data[0], 7));
+
+                    _Target.SetButtonState(Xbox360Button.Back, GetBit(data[1], 2));
+                    _Target.SetButtonState(Xbox360Button.Start, GetBit(data[1], 3));
+                    _Target.SetButtonState(Xbox360Button.LeftThumb, GetBit(data[1], 5));
+                    _Target.SetButtonState(Xbox360Button.RightThumb, GetBit(data[1], 6));
+
+                    // Reset Hat switch status, as is set to 15 (all directions set, impossible state)
+                    _Target.SetButtonState(Xbox360Button.Up, false);
+                    _Target.SetButtonState(Xbox360Button.Left, false);
+                    _Target.SetButtonState(Xbox360Button.Down, false);
+                    _Target.SetButtonState(Xbox360Button.Right, false);
+
+                    if (data[3] < 8)
+                    {
+                        var btns = HatSwitches[data[3]];
+                        // Hat Switch is a number from 0 to 7, where 0 is Up, 1 is Up-Left, etc.
+                        foreach (var b in btns)
+                            _Target.SetButtonState(b, true);
+                    }
+
+                    // Analog axis
+                    _Target.SetAxisValue(Xbox360Axis.LeftThumbX, MapAnalog(data[4]));
+                    _Target.SetAxisValue(Xbox360Axis.LeftThumbY, MapAnalog(data[5], true));
+                    _Target.SetAxisValue(Xbox360Axis.RightThumbX, MapAnalog(data[6]));
+                    _Target.SetAxisValue(Xbox360Axis.RightThumbY, MapAnalog(data[7], true));
+
+                    // Triggers
+                    _Target.SetSliderValue(Xbox360Slider.LeftTrigger, data[10]);
+                    _Target.SetSliderValue(Xbox360Slider.RightTrigger, data[11]);
+
+                    // Logo ("home") button
+                    if (GetBit(data[19], 0))
+                    {
+                        _Target.SetButtonState(Xbox360Button.Guide, true);
+                        Task.Delay(200).ContinueWith(DelayedReleaseGuideButton);
+                    }
+
+                    // Update battery level
+                    BatteryLevel = data[18];
+
+                    _Target.SubmitReport();
+                }
+
             }
+
+            // Disconnect the virtual Xbox360 gamepad
+            // Let Dispose handle that, otherwise it will rise a NotPluggedIn exception
+            _Logger.Information("Disconnecting ViGEm client");
+            _Target.Disconnect();
+
+            // Close the HID device
+            _Logger.Information("Closing HID device {Device}", _Device);
+            _Device.CloseDevice();
+
+            DisableReEnableDevice();
 
             _Logger.Information("Exiting worker thread for {0}", _Device.ToString());
             Ended?.Invoke(this, EventArgs.Empty);
