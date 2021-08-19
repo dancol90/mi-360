@@ -47,69 +47,13 @@ namespace HidLibrary
             return EnumerateDevices().Select(x => new HidDevice(x.Path, x.Description)).Where(x => x.Attributes.VendorId == vendorId);
         }
 
-        public static bool SetDeviceState(string interfacePath, bool state)
-        {
-            var iface = EnumerateDevicesInterfaces(false)
-                .Where(ei =>
-                {
-                    var devicePath = GetDevicePath(ei.DeviceInfoSet, ei.DeviceInterfaceData);
-                    return devicePath.ToLower() == interfacePath.ToLower();
-                })
-                .FirstOrDefault();
-
-            if (iface == null)
-                return false;
-
-            var header = new NativeMethods.SP_CLASSINSTALL_HEADER();
-            header.cbSize = (int)Marshal.SizeOf(header);
-            header.InstallFunction = NativeMethods.DIF_PROPERTYCHANGE;
-
-            var propchangeparams = new NativeMethods.SP_PROPCHANGE_PARAMS
-            {
-                ClassInstallHeader = header,
-                StateChange = state ? NativeMethods.DICS_ENABLE : NativeMethods.DICS_DISABLE,
-                Scope = NativeMethods.DICS_FLAG_GLOBAL,
-                HwProfile = 0
-            };
-
-            NativeMethods.SetupDiSetClassInstallParams(iface.DeviceInfoSet, ref iface.DeviceInfoData, ref propchangeparams, (UInt32)Marshal.SizeOf(propchangeparams));
-
-            if (Marshal.GetLastWin32Error() != 0)
-                return false;
-
-            NativeMethods.SetupDiChangeState(iface.DeviceInfoSet, ref iface.DeviceInfoData);
-            
-            if (Marshal.GetLastWin32Error() != 0)
-                return false;
-
-            return true;
-        }
-
         public class DeviceInfo { public string Path { get; set; } public string Description { get; set; } }
-
-        internal class DeviceInterfaceInfo
-        {
-            internal IntPtr DeviceInfoSet;
-            internal NativeMethods.SP_DEVINFO_DATA DeviceInfoData;
-            internal NativeMethods.SP_DEVICE_INTERFACE_DATA DeviceInterfaceData;
-            internal int DeviceInterfaceIndex;
-        }
 
         public static IEnumerable<DeviceInfo> EnumerateDevices()
         {
-            return EnumerateDevicesInterfaces().Select(ei => { 
-                var devicePath = GetDevicePath(ei.DeviceInfoSet, ei.DeviceInterfaceData);
-                var description = GetBusReportedDeviceDescription(ei.DeviceInfoSet, ref ei.DeviceInfoData) ??
-                                  GetDeviceDescription(ei.DeviceInfoSet, ref ei.DeviceInfoData);
-                return new DeviceInfo { Path = devicePath, Description = description };
-            });
-        }
-
-        internal static IEnumerable<DeviceInterfaceInfo> EnumerateDevicesInterfaces(bool presentOnly = true)
-        {
+            var devices = new List<DeviceInfo>();
             var hidClass = HidClassGuid;
-            var flags = NativeMethods.DIGCF_DEVICEINTERFACE | (presentOnly ? NativeMethods.DIGCF_PRESENT : 0);
-            var deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref hidClass, null, 0, flags);
+            var deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref hidClass, null, 0, NativeMethods.DIGCF_PRESENT | NativeMethods.DIGCF_DEVICEINTERFACE);
 
             if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
             {
@@ -127,16 +71,15 @@ namespace HidLibrary
                     while (NativeMethods.SetupDiEnumDeviceInterfaces(deviceInfoSet, ref deviceInfoData, ref hidClass, deviceInterfaceIndex, ref deviceInterfaceData))
                     {
                         deviceInterfaceIndex++;
-                        yield return new DeviceInterfaceInfo {
-                            DeviceInfoSet = deviceInfoSet,
-                            DeviceInfoData = deviceInfoData,
-                            DeviceInterfaceData = deviceInterfaceData,
-                            DeviceInterfaceIndex = deviceInterfaceIndex
-                        };
+                        var devicePath = GetDevicePath(deviceInfoSet, deviceInterfaceData);
+                        var description = GetBusReportedDeviceDescription(deviceInfoSet, ref deviceInfoData) ??
+                                          GetDeviceDescription(deviceInfoSet, ref deviceInfoData);
+                        devices.Add(new DeviceInfo { Path = devicePath, Description = description });
                     }
                 }
                 NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
             }
+            return devices;
         }
 
         private static NativeMethods.SP_DEVINFO_DATA CreateDeviceInfoData()
