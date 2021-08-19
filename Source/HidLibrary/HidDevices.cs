@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace HidLibrary
@@ -46,15 +45,6 @@ namespace HidLibrary
         public static IEnumerable<HidDevice> Enumerate(int vendorId)
         {
             return EnumerateDevices().Select(x => new HidDevice(x.Path, x.Description)).Where(x => x.Attributes.VendorId == vendorId);
-        }
-
-        public static IEnumerable<string> EnumeratePaths(string filter)
-        {
-            var f = filter.ToLower();
-
-            return EnumerateDevices()
-                .Select(x => x.Path.ToLower())
-                .Where(x => x.Contains(f));
         }
 
         public static bool SetDeviceState(string interfacePath, bool state)

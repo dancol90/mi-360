@@ -119,14 +119,18 @@ namespace HidLibrary
 
         public HidDeviceData Read(int timeout)
         {
-            if (IsOpen == false) OpenDevice(_deviceReadMode, _deviceWriteMode, _deviceShareMode);
-            try
+            if (IsConnected)
             {
-                return ReadData(timeout);
-            }
-            catch
-            {
-                return new HidDeviceData(HidDeviceData.ReadStatus.ReadError);
+                if (IsOpen == false) OpenDevice(_deviceReadMode, _deviceWriteMode, _deviceShareMode);
+                try
+                {
+                    return ReadData(timeout);
+                }
+                catch
+                {
+                    return new HidDeviceData(HidDeviceData.ReadStatus.ReadError);
+                }
+
             }
             return new HidDeviceData(HidDeviceData.ReadStatus.NotConnected);
         }
