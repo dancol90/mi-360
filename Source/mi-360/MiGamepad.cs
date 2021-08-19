@@ -16,8 +16,6 @@ namespace mi360
 {
     class MiGamepad : IDisposable
     {
-        private static string XiaomiGamepadHardwareId = @"HID\{00001124-0000-1000-8000-00805f9b34fb}_VID&00022717_PID&3144";
-
         private ILogger _Logger = Log.ForContext<MiGamepad>();
 
         private static readonly Xbox360Button[][] HatSwitches = {
@@ -34,17 +32,19 @@ namespace mi360
         public event EventHandler Started;
         public event EventHandler Ended;
 
-        private readonly HidDevice _Device;
+        private readonly HidFastReadDevice _Device;
         private readonly IXbox360Controller _Target;
         private readonly Thread _InputThread;
         private readonly CancellationTokenSource _CTS;
         private readonly Timer _VibrationTimer;
 
+        private static readonly IHidEnumerator _DeviceEnumerator = new HidFastReadEnumerator();
+
         public MiGamepad(string device, ViGEmClient client)
         {
             _Logger.Information("Initializing MiGamepad handler for device {Device}", device);
 
-            _Device = HidDevices.GetDevice(device);
+            _Device = _DeviceEnumerator.GetDevice(device) as HidFastReadDevice;
             _Device.MonitorDeviceEvents = false;
 
             _Target = client.CreateXbox360Controller();
@@ -62,7 +62,7 @@ namespace mi360
 
         #region Properties
 
-        public HidDevice Device => _Device;
+        public HidFastReadDevice Device => _Device;
 
         public ushort LedNumber { get; private set; }
 
