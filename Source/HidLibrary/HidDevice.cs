@@ -445,11 +445,6 @@ namespace HidLibrary
             return success;
         }
 
-        public bool SetState(bool enabled)
-        {
-            return HidDevices.SetDeviceState(_devicePath, enabled);
-        }
-
         protected static void EndRead(IAsyncResult ar)
         {
             var hidAsyncState = (HidAsyncState)ar.AsyncState;

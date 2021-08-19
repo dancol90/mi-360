@@ -105,22 +105,9 @@ namespace mi360
             _InputThread.Join();
         }
 
-        public void DisableReEnableDevice()
-        {
-            _Logger.Information("Disabling gamepad {Device}", _Device);
-            if (!_Device.SetState(false))
-                _Logger.Error("Cannot disable device {Device}", _Device);
-
-            _Logger.Information("Enabling gamepad {Device}", _Device);
-            if (!_Device.SetState(true))
-                _Logger.Error("Cannot enable device {Device}", _Device);
-        }
-
         private void DeviceWorker()
         {
             _Logger.Information("Starting worker thread for {Device}", _Device);
-
-            DisableReEnableDevice();
 
             // Open HID device to read input from the gamepad
             _Logger.Information("Opening HID device {Device}", _Device);
@@ -267,8 +254,6 @@ namespace mi360
             // Close the HID device
             _Logger.Information("Closing HID device {Device}", _Device);
             _Device.CloseDevice();
-
-            DisableReEnableDevice();
 
             _Logger.Information("Exiting worker thread for {0}", _Device.ToString());
             Ended?.Invoke(this, EventArgs.Empty);
