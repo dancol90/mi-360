@@ -19,18 +19,19 @@ namespace mi360.Win32
         private ILogger _Logger = Log.ForContext<HidMonitor>();
 
         private Timer _MonitorTimer;
-        private string _Filter;
+        private int _VID, _PID;
         private string[] _SeenDevices;
 
         #endregion
 
         #region Constructors
 
-        public HidMonitor(string filter)
+        public HidMonitor(int vid, int pid)
         {
-            _Logger.Information("Initializing HID device monitor with filter {Filter}", filter);
+            _Logger.Information("Initializing HID device monitor with filter {VID}:{PID}", vid, pid);
 
-            _Filter = filter;
+            _VID = vid;
+            _PID = pid;
             _MonitorTimer = new Timer(SearchForDevice);
 
             _SeenDevices = new string[0];
@@ -42,20 +43,21 @@ namespace mi360.Win32
 
         public void Start()
         {
-            _Logger.Information("Start monitoring for filter {Filter}", _Filter);
+            _Logger.Information("Start monitoring for filter {VID}:{PID}", _VID, _PID);
             _MonitorTimer.Change(0, 5000);
         }
 
         public void Stop()
         {
-            _Logger.Information("Stop monitoring for filter {Filter}", _Filter);
+            _Logger.Information("Stop monitoring for filter {VID}:{PID}", _VID, _PID);
             _MonitorTimer.Change(Timeout.Infinite, Timeout.Infinite);
         }
 
         private void SearchForDevice(object state)
         {
             var devices = HidDevices
-                .EnumeratePaths(_Filter)
+                .Enumerate(_VID, _PID)
+                .Select(d => d.DevicePath)
                 .ToArray();
 
             // Get all the devices that has connected since the last check
@@ -66,13 +68,13 @@ namespace mi360.Win32
 
             foreach (var device in newDevices)
             {
-                _Logger.Information("Detected attached HID devices matching filter {Filter}", _Filter);
+                _Logger.Information("Detected attached HID devices matching filter {VID}:{PID}", _VID, _PID);
                 DeviceAttached?.Invoke(this, device);
             }
 
             foreach (var device in removedDevices)
             {
-                _Logger.Information("Detected removed HID devices matching filter {Filter}", _Filter);
+                _Logger.Information("Detected removed HID devices matching filter {VID}:{PID}", _VID, _PID);
                 DeviceRemoved?.Invoke(this, device);
             }
 
@@ -85,7 +87,7 @@ namespace mi360.Win32
 
         public void Dispose()
         {
-            _Logger.Information("Deinitilizing HID monitor for {Filter}", _Filter);
+            _Logger.Information("Deinitilizing HID monitor for {VID}:{PID}", _VID, _PID);
             _MonitorTimer.Dispose();
         }
 
