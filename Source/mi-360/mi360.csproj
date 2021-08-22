@@ -79,13 +79,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Win32\DeviceMonitor.cs" />
     <Compile Include="Win32\HidHide.cs" />
     <Compile Include="Win32\HidMonitor.cs" />
-    <Compile Include="Win32\IMonitor.cs" />
-    <Compile Include="Win32\Native\DBT.cs" />
     <Compile Include="Win32\Native\Kernel32.cs" />
-    <Compile Include="Win32\Native\SetupApi.cs" />
     <Compile Include="Win32\VolumeHelper.cs" />
     <Compile Include="Win32\WideStringHelper.cs" />
     <Compile Include="XInputManager.cs" />
