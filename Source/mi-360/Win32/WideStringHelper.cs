@@ -61,7 +61,10 @@ namespace mi360.Win32
             Marshal.Copy(buffer, rawBuffer, 0, length);
 
             // Trims away potential redundant NULL-characters and splits at NULL-terminator
-            return Encoding.Unicode.GetString(rawBuffer).TrimEnd(char.MinValue).Split(char.MinValue);
+            return Encoding.Unicode.GetString(rawBuffer)
+                .TrimEnd(char.MinValue)
+                .Split(char.MinValue)
+                .Where(s => !String.IsNullOrWhiteSpace(s));
         }
     }
 }
