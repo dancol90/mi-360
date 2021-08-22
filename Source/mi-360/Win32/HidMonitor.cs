@@ -9,18 +9,38 @@ using HidLibrary;
 
 namespace mi360.Win32
 {
-    class HidMonitor : IMonitor
+    public class DeviceEventArgs : EventArgs
+    {
+        internal DeviceEventArgs(HidDevices.DeviceInfo info) : base()
+        {
+            Path = info.Path;
+            Description = info.Description;
+            InstanceID = info.InstanceID;
+        }
+
+        public string Path { get; set; }
+        public string Description { get; set; }
+        public string InstanceID { get; set; }
+    }
+
+    class DeviceInfoEqualityComparer : IEqualityComparer<HidDevices.DeviceInfo>
+    {
+        public bool Equals(HidDevices.DeviceInfo x, HidDevices.DeviceInfo y) => x.Path == y.Path;
+        public int GetHashCode(HidDevices.DeviceInfo di) => di.Path.GetHashCode();
+    }
+
+    class HidMonitor
     {
         #region Constants & Fields
 
-        public event EventHandler<string> DeviceAttached;
-        public event EventHandler<string> DeviceRemoved;
+        public event EventHandler<DeviceEventArgs> DeviceAttached;
+        public event EventHandler<DeviceEventArgs> DeviceRemoved;
 
         private ILogger _Logger = Log.ForContext<HidMonitor>();
 
         private Timer _MonitorTimer;
         private string _Filter;
-        private string[] _SeenDevices;
+        private HidDevices.DeviceInfo[] _SeenDevices;
 
         #endregion
 
@@ -33,7 +53,7 @@ namespace mi360.Win32
             _Filter = filter;
             _MonitorTimer = new Timer(SearchForDevice);
 
-            _SeenDevices = new string[0];
+            _SeenDevices = new HidDevices.DeviceInfo[0];
         }
 
         #endregion
@@ -57,26 +77,27 @@ namespace mi360.Win32
             var filter = _Filter.ToLower();
             var devices = HidDevices
                 .EnumerateDevices()
-                .Select(d => d.Path)
-                .Where(p => p.ToLower().Contains(filter))
+                .Where(p => p.Path.ToLower().Contains(filter))
                 .ToArray();
 
+            var comp = new DeviceInfoEqualityComparer();
+
             // Get all the devices that has connected since the last check
-            var newDevices = devices.Except(_SeenDevices);
+            var newDevices = devices.Except(_SeenDevices, comp);
 
             // Get all the device that has disconnected since the last check
-            var removedDevices = _SeenDevices.Except(devices);
+            var removedDevices = _SeenDevices.Except(devices, comp);
 
             foreach (var device in newDevices)
             {
                 _Logger.Information("Detected attached HID devices matching filter {Filter}", _Filter);
-                DeviceAttached?.Invoke(this, device);
+                DeviceAttached?.Invoke(this, new DeviceEventArgs(device));
             }
 
             foreach (var device in removedDevices)
             {
                 _Logger.Information("Detected removed HID devices matching filter {Filter}", _Filter);
-                DeviceRemoved?.Invoke(this, device);
+                DeviceRemoved?.Invoke(this, new DeviceEventArgs(device));
             }
 
             _SeenDevices = devices;
