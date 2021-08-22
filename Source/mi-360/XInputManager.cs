@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Serilog;
 using Nefarius.ViGEm.Client;
+using mi360.Win32;
 
 namespace mi360
 {
@@ -37,7 +38,7 @@ namespace mi360
 
             foreach (var device in devices)
             {
-                device.Stop();
+                StopAndRemove(device);
                 device.Dispose();
             }
 
@@ -49,7 +50,7 @@ namespace mi360
 
         #region Methods
 
-        public bool AddAndStart(string device)
+        public bool AddAndStart(string device, string instance)
         {
             if (Contains(device))
             {
@@ -58,11 +59,15 @@ namespace mi360
             }
 
             _Logger.Information("Adding device {Device}", device);
-            var gamepad = new MiGamepad(device, _ViGEmClient);
+            var gamepad = new MiGamepad(device, instance, _ViGEmClient);
             _Gamepads.Add(device, gamepad);
 
             gamepad.Started += Gamepad_Started;
             gamepad.Ended += Gamepad_Ended;
+
+            _Logger.Information("Hiding device instance {Device}", gamepad.InstanceID);
+            using (var hh = new HidHide())
+                hh.SetDeviceHideStatus(gamepad.InstanceID, true);
 
             _Logger.Information("Starting {Device}", device);
             gamepad.Start();
@@ -79,24 +84,29 @@ namespace mi360
             }
             
             var gamepad = _Gamepads[device];
+            StopAndRemove(gamepad);
+        }
 
-            _Logger.Information("Stopping device {Device}", device);
+        private void StopAndRemove(MiGamepad gamepad)
+        {
+            _Logger.Information("Stopping device {Device}", gamepad.Device.DevicePath);
             if (gamepad.IsActive)
                 gamepad.Stop();
 
             gamepad.Started -= Gamepad_Started;
             gamepad.Ended -= Gamepad_Ended;
 
-            _Logger.Information("Deinitializing and removing device {Device}", device);
+            _Logger.Information("Un-hiding device instance {Device}", gamepad.InstanceID);
+            using (var hh = new HidHide())
+                hh.SetDeviceHideStatus(gamepad.InstanceID, false);
+
+            _Logger.Information("Deinitializing and removing device {Device}", gamepad.Device.DevicePath);
+            _Gamepads.Remove(gamepad.Device.DevicePath);
             gamepad.Dispose();
-
-            _Gamepads.Remove(device);
         }
 
-        public bool Contains(string device)
-        {
-            return _Gamepads.ContainsKey(device);
-        }
+        public bool Contains(string device) => _Gamepads.ContainsKey(device);
+        private bool Contains(MiGamepad device) => _Gamepads.ContainsValue(device);
 
         #endregion
 
@@ -105,7 +115,8 @@ namespace mi360
             _SyncContext.Post(o =>
             {
                 var gamepad = sender as MiGamepad;
-                StopAndRemove(gamepad.Device.DevicePath);
+                if (!gamepad.CleanEnd)
+                    StopAndRemove(gamepad);
 
                 GamepadRemoved?.Invoke(this, EventArgs.Empty);
             }, null);
