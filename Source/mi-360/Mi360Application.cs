@@ -37,8 +37,12 @@ namespace mi360
             _Monitor.Start();
 
             using (var hh = new HidHide())
-                hh.WhitelistCurrentApplication();
-                
+            {
+                var success = hh.WhitelistCurrentApplication();
+
+                if (!success)
+                    MessageBox.Show("HidHide is not installed or it's currently used by another application. Device hiding will not work properly.", "HidHid unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }   
             _Logger.Information("mi-360 is running");
         }
 
