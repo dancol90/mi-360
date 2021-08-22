@@ -106,20 +106,13 @@ namespace mi360
         private void Monitor_DeviceAttached(object sender, DeviceEventArgs e)
         {
             _Logger.Information("New HID device connected: {Descr} {Device}", e.Description, e.Path);
-
-            using (var hh = new HidHide())
-                hh.SetDeviceHideStatus(e.InstanceID, true);
-
-            _Manager.AddAndStart(e.Path);
+            _Manager.AddAndStart(e.Path, e.InstanceID);
         }
 
         private void Monitor_DeviceRemoved(object sender, DeviceEventArgs e)
         {
             _Logger.Information("HID device disconnected: {Descr} {Device}", e.Description, e.Path);
             _Manager.StopAndRemove(e.Path);
-
-            using (var hh = new HidHide())
-                hh.SetDeviceHideStatus(e.InstanceID, false);
         }
 
         private void Manager_GamepadRemoved(object sender, EventArgs eventArgs)

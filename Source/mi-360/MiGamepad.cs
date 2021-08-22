@@ -40,7 +40,7 @@ namespace mi360
 
         private static readonly IHidEnumerator _DeviceEnumerator = new HidFastReadEnumerator();
 
-        public MiGamepad(string device, ViGEmClient client)
+        public MiGamepad(string device, string instance, ViGEmClient client)
         {
             _Logger.Information("Initializing MiGamepad handler for device {Device}", device);
 
@@ -58,6 +58,7 @@ namespace mi360
             _VibrationTimer = new Timer(VibrationTimer_Trigger);
 
             LedNumber = 0xFF;
+            InstanceID = instance;
         }
 
         #region Properties
@@ -69,8 +70,11 @@ namespace mi360
         public ushort BatteryLevel { get; private set; }
 
         public bool IsActive => _InputThread.IsAlive;
+        public bool CleanEnd => _CTS.IsCancellationRequested;
 
         public bool ExclusiveMode { get; private set; }
+
+        public string InstanceID { get; private set; }
 
         #endregion
 
@@ -150,8 +154,9 @@ namespace mi360
             Started?.Invoke(this, EventArgs.Empty);
 
             HidReport hidReport;
+            var token = _CTS.Token;
 
-            while (!_CTS.Token.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
                 // Is device has been closed, exit the loop
                 if (!_Device.IsOpen)
