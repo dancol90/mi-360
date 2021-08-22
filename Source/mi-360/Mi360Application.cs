@@ -18,7 +18,7 @@ namespace mi360
         private ILogger _Logger = Log.ForContext<Mi360Application>();
 
         private NotifyIcon _NotifyIcon;
-        private IMonitor _Monitor;
+        private HidMonitor _Monitor;
         private XInputManager _Manager;
 
         public Mi360Application()
@@ -36,6 +36,9 @@ namespace mi360
             _Monitor.DeviceRemoved += Monitor_DeviceRemoved;
             _Monitor.Start();
 
+            using (var hh = new HidHide())
+                hh.WhitelistCurrentApplication();
+                
             _Logger.Information("mi-360 is running");
         }
 
@@ -100,16 +103,23 @@ namespace mi360
             _NotifyIcon.Visible = false;
         }
 
-        private void Monitor_DeviceAttached(object sender, string s)
+        private void Monitor_DeviceAttached(object sender, DeviceEventArgs e)
         {
-            _Logger.Information("New HID device connected: {Device}", s);
-            _Manager.AddAndStart(s);
+            _Logger.Information("New HID device connected: {Descr} {Device}", e.Description, e.Path);
+
+            using (var hh = new HidHide())
+                hh.SetDeviceHideStatus(e.InstanceID, true);
+
+            _Manager.AddAndStart(e.Path);
         }
 
-        private void Monitor_DeviceRemoved(object sender, string s)
+        private void Monitor_DeviceRemoved(object sender, DeviceEventArgs e)
         {
-            _Logger.Information("HID device disconnected: {Device}", s);
-            _Manager.StopAndRemove(s);
+            _Logger.Information("HID device disconnected: {Descr} {Device}", e.Description, e.Path);
+            _Manager.StopAndRemove(e.Path);
+
+            using (var hh = new HidHide())
+                hh.SetDeviceHideStatus(e.InstanceID, false);
         }
 
         private void Manager_GamepadRemoved(object sender, EventArgs eventArgs)
