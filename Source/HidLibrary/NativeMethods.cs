@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace HidLibrary
 {
@@ -218,7 +219,10 @@ namespace HidLibrary
 	    [DllImport("setupapi.dll", CharSet = CharSet.Auto)]
 	    static internal extern bool SetupDiGetDeviceInterfaceDetail(IntPtr deviceInfoSet, ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA deviceInterfaceDetailData, int deviceInterfaceDetailDataSize, ref int requiredSize, IntPtr deviceInfoData);
 
-	    [DllImport("user32.dll")]
+		[DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+		static internal extern bool SetupDiGetDeviceInstanceId(IntPtr DeviceInfoSet, ref SP_DEVINFO_DATA DeviceInfoData, [Out] char[] DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize );
+
+		[DllImport("user32.dll")]
 	    static internal extern bool UnregisterDeviceNotification(IntPtr handle);
 
 	    internal const short HIDP_INPUT = 0;
