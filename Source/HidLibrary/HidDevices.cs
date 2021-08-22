@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace HidLibrary
 {
@@ -47,13 +48,15 @@ namespace HidLibrary
             return EnumerateDevices().Select(x => new HidDevice(x.Path, x.Description)).Where(x => x.Attributes.VendorId == vendorId);
         }
 
-        public class DeviceInfo { public string Path { get; set; } public string Description { get; set; } }
+        public class DeviceInfo { public string Path { get; set; } public string Description { get; set; } public string InstanceID { get; set; } }
 
         public static IEnumerable<DeviceInfo> EnumerateDevices()
         {
             var devices = new List<DeviceInfo>();
             var hidClass = HidClassGuid;
             var deviceInfoSet = NativeMethods.SetupDiGetClassDevs(ref hidClass, null, 0, NativeMethods.DIGCF_PRESENT | NativeMethods.DIGCF_DEVICEINTERFACE);
+
+            var buf = new char[1024];
 
             if (deviceInfoSet.ToInt64() != NativeMethods.INVALID_HANDLE_VALUE)
             {
@@ -63,6 +66,9 @@ namespace HidLibrary
                 while (NativeMethods.SetupDiEnumDeviceInfo(deviceInfoSet, deviceIndex, ref deviceInfoData))
                 {
                     deviceIndex += 1;
+
+                    NativeMethods.SetupDiGetDeviceInstanceId(deviceInfoSet, ref deviceInfoData, buf, buf.Length, out var requiredSize);
+                    var instid = new string(buf, 0, requiredSize - 1);
 
                     var deviceInterfaceData = new NativeMethods.SP_DEVICE_INTERFACE_DATA();
                     deviceInterfaceData.cbSize = Marshal.SizeOf(deviceInterfaceData);
@@ -74,7 +80,7 @@ namespace HidLibrary
                         var devicePath = GetDevicePath(deviceInfoSet, deviceInterfaceData);
                         var description = GetBusReportedDeviceDescription(deviceInfoSet, ref deviceInfoData) ??
                                           GetDeviceDescription(deviceInfoSet, ref deviceInfoData);
-                        devices.Add(new DeviceInfo { Path = devicePath, Description = description });
+                        devices.Add(new DeviceInfo { Path = devicePath, Description = description, InstanceID = instid });
                     }
                 }
                 NativeMethods.SetupDiDestroyDeviceInfoList(deviceInfoSet);
