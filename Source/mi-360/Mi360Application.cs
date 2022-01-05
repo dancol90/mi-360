@@ -23,13 +23,21 @@ namespace mi360
 
         public Mi360Application()
         {
-            InitializeComponents();
-
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            _Manager = new XInputManager();
-            _Manager.GamepadRunning += Manager_GamepadRunning;
-            _Manager.GamepadRemoved += Manager_GamepadRemoved;
+            try
+            {
+                _Manager = new XInputManager();
+                _Manager.GamepadRunning += Manager_GamepadRunning;
+                _Manager.GamepadRemoved += Manager_GamepadRemoved;
+            }
+            catch (Nefarius.ViGEm.Client.Exceptions.VigemBusNotFoundException ex)
+            {
+                _Logger.Error("Cannot find ViGEm Bus");
+                MessageBox.Show("ViGEm Bus not found. Please make sure that is installed correctly", "ViGEm not found", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CanRun = false;
+                return;
+            }
 
             _Monitor = new HidMonitor(XiaomiGamepadHardwareFilter);
             _Monitor.DeviceAttached += Monitor_DeviceAttached;
@@ -42,9 +50,15 @@ namespace mi360
 
                 if (!success)
                     MessageBox.Show("HidHide is not installed or it's currently used by another application. Device hiding will not work properly.", "HidHid unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }   
+            }
+
+            InitializeComponents();
+
             _Logger.Information("mi-360 is running");
+            CanRun = true;
         }
+
+        public bool CanRun { get; private set; }
 
         #region Initialization/Cleanup methods
 
@@ -75,10 +89,10 @@ namespace mi360
         {
             _Logger.Information("Deinitializing resources");
 
-            _Monitor.Stop();
-            _Monitor.Dispose();
+            _Monitor?.Stop();
+            _Monitor?.Dispose();
 
-            _Manager.Dispose();
+            _Manager?.Dispose();
 
             base.Dispose(disposing);
         }

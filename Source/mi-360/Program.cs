@@ -21,7 +21,11 @@ namespace mi360
                 .WriteTo.File(path: fileName, outputTemplate: LoggerTemplate)
                 .CreateLogger();
 
-            Application.Run(new Mi360Application());
+            var app = new Mi360Application();
+
+            if (app.CanRun)
+                Application.Run();
+
             Log.CloseAndFlush();
         }
 
