@@ -35,6 +35,7 @@ ShowLanguageDialog=auto
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 PrivilegesRequired=admin
+WizardStyle=modern
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
