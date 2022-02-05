@@ -24,7 +24,7 @@ namespace mi360
             var app = new Mi360Application();
 
             if (app.CanRun)
-                Application.Run();
+                Application.Run(app);
 
             Log.CloseAndFlush();
         }

@@ -25,6 +25,8 @@ namespace mi360
         {
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
+            InitializeComponents();
+
             try
             {
                 _Manager = new XInputManager();
