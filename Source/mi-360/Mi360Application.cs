@@ -54,7 +54,6 @@ namespace mi360
                     hh.EnableHiding = true;
                 else
                     MessageBox.Show("HidHide is not installed or it's currently used by another application. Device hiding will not work properly.", "HidHid unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
             }
 
             _Logger.Information("mi-360 is running");
