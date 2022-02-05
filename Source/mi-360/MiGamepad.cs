@@ -271,7 +271,10 @@ namespace mi360
 
         private short MapAnalog(byte value, bool invert = false)
         {
-            return (short)(value * 257 * (invert ? -1 : 1) + short.MinValue);
+            if (invert)
+                value = (byte)(byte.MaxValue - value);
+
+            return (short)(short.MinValue + value * 257);
         }
 
         private void DelayedReleaseGuideButton(Task t)
