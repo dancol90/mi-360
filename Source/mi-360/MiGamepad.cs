@@ -35,8 +35,12 @@ namespace mi360
         private readonly HidFastReadDevice _Device;
         private readonly IXbox360Controller _Target;
         private readonly Thread _InputThread;
+        private readonly Thread _VibrationThread;
         private readonly CancellationTokenSource _CTS;
-        private readonly Timer _VibrationTimer;
+        
+        private readonly AutoResetEvent _VibrationEvent;
+        private readonly AutoResetEvent _DeviceEvent;
+        private byte[] _VibrationData;
 
         private static readonly IHidEnumerator _DeviceEnumerator = new HidFastReadEnumerator();
 
@@ -53,9 +57,12 @@ namespace mi360
 
             // TODO mark the threads as background?
             _InputThread = new Thread(DeviceWorker);
+            _VibrationThread = new Thread(VibrationWorker);
 
             _CTS = new CancellationTokenSource();
-            _VibrationTimer = new Timer(VibrationTimer_Trigger);
+            _DeviceEvent = new AutoResetEvent(false);
+            _VibrationEvent = new AutoResetEvent(false);
+            _VibrationData = new byte[] { 0x20, 0, 0 };
 
             LedNumber = 0xFF;
             InstanceID = instance;
@@ -94,6 +101,7 @@ namespace mi360
         public void Start()
         {
             _InputThread.Start();
+            _VibrationThread.Start();
         }
 
         public void Stop()
@@ -107,6 +115,51 @@ namespace mi360
             _Logger.Information("Requesting thread stop for {Device}", _Device);
             _CTS.Cancel();
             _InputThread.Join();
+            _VibrationThread.Join();
+        }
+
+        private void VibrationWorker()
+        {
+            _Logger.Information("Starting vibration thread for {Device}", _Device);
+            
+            _DeviceEvent.WaitOne();
+            _Logger.Information("Vibration thread ready for {Device}", _Device);
+
+            if (!_Device.IsOpen)
+            {
+                _Logger.Debug("Device {Device} not connected, exiting vibration thread", _Device);
+                return;
+            }
+
+            // Init Xiaomi Gamepad vibration
+            _Device.WriteFeatureData(new byte[] { 0x20, 0x00, 0x00 });
+
+            var token = _CTS.Token;
+            var lastVibrationUpdate = DateTime.Now;
+
+            while (!token.IsCancellationRequested)
+            {
+                // Is device has been closed, exit the loop
+                if (!_Device.IsOpen)
+                    break;
+
+                if (_VibrationEvent.WaitOne(500))
+                {
+                    _Logger.Debug("Setting vibration to {Big};{Small}", _VibrationData[1], _VibrationData[2]);
+                    _Device.WriteFeatureData(_VibrationData);
+                    lastVibrationUpdate = DateTime.Now;
+                }
+                else if ((_VibrationData[1] > 0 || _VibrationData[2] > 0) &&
+                         DateTime.Now - lastVibrationUpdate > TimeSpan.FromSeconds(3))
+                {
+                    _Logger.Debug("Reached timeout, resetting vibration");
+                    _VibrationData[1] = 0;
+                    _VibrationData[2] = 0;
+                    _Device.WriteFeatureData(_VibrationData);
+                }
+            }
+
+            _Logger.Information("Exiting vibration thread for {0}", _Device.ToString());
         }
 
         private void DeviceWorker()
@@ -135,9 +188,6 @@ namespace mi360
                 }
             }
 
-            // Init Xiaomi Gamepad vibration
-            _Device.WriteFeatureData(new byte[] { 0x20, 0x00, 0x00 });
-
             // Connect the virtual Xbox360 gamepad
             try
             {
@@ -151,6 +201,7 @@ namespace mi360
                 _Target.Connect();
             }
 
+            _DeviceEvent.Set();
             Started?.Invoke(this, EventArgs.Empty);
 
             HidReport hidReport;
@@ -248,7 +299,6 @@ namespace mi360
 
                     _Target.SubmitReport();
                 }
-
             }
 
             // Disconnect the virtual Xbox360 gamepad
@@ -261,6 +311,7 @@ namespace mi360
             _Device.CloseDevice();
 
             _Logger.Information("Exiting worker thread for {0}", _Device.ToString());
+            _DeviceEvent.Set();
             Ended?.Invoke(this, EventArgs.Empty);
         }
 
@@ -290,37 +341,11 @@ namespace mi360
 
         #region Event Handlers
 
-        private void VibrationTimer_Trigger(object o)
-        {
-            Task.Run(() => {
-                lock (_VibrationTimer)
-                {
-                    if (_Device.IsOpen)
-                        _Device.WriteFeatureData(new byte[] { 0x20, 0x00, 0x00 });
-
-                    _Logger.Information("Vibration feedback reset after 3 seconds for {Device}", _Device);
-                }
-            });
-        }
-
         private void Target_OnFeedbackReceived(object sender, Xbox360FeedbackReceivedEventArgs e)
         {
-            byte[] data = { 0x20, e.SmallMotor, e.LargeMotor };
-
-            Task.Run(() => {
-
-                lock (_VibrationTimer)
-                {
-                    if (!_Device.IsOpen)
-                        return;
-
-                    _Device.WriteFeatureData(data);
-                }
-
-                var timeout = e.SmallMotor > 0 || e.LargeMotor > 0 ? 3000 : Timeout.Infinite;
-                _VibrationTimer.Change(timeout, Timeout.Infinite);
-                
-            });
+            _VibrationData[1] = e.SmallMotor;
+            _VibrationData[2] = e.LargeMotor;
+            _VibrationEvent.Set();
 
             if (LedNumber != e.LedNumber)
             {
