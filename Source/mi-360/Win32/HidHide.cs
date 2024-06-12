@@ -108,7 +108,7 @@ namespace mi360.Win32
             // Manipulate allow-list and submit it
             try
             {
-                var appPath = System.Reflection.Assembly.GetEntryAssembly().Location;
+                var appPath = Environment.ProcessPath;
                 var dosPath = VolumeHelper.PathToDosDevicePath(appPath);
 
                 var whitelist = GetWhitelist();
