@@ -51,7 +51,8 @@ namespace HidLibrary
             }
         }
 
-        public IntPtr Handle { get; private set; }
+        public IntPtr ReadHandle { get; private set; }
+        public IntPtr WriteHandle { get; private set; }
         public bool IsOpen { get; private set; }
         public bool IsConnected { get { return HidDevices.IsConnected(_devicePath); } }
         public string Description { get { return _description; } }
@@ -93,7 +94,8 @@ namespace HidLibrary
 
             try
             {
-                Handle = OpenDeviceIO(_devicePath, readMode, NativeMethods.GENERIC_READ | NativeMethods.GENERIC_WRITE, shareMode);
+                ReadHandle = OpenDeviceIO(_devicePath, readMode, NativeMethods.GENERIC_READ, shareMode);
+                WriteHandle = OpenDeviceIO(_devicePath, writeMode, NativeMethods.GENERIC_WRITE, shareMode);
             }
             catch (Exception exception)
             {
@@ -101,14 +103,16 @@ namespace HidLibrary
                 throw new Exception("Error opening HID device.", exception);
             }
 
-            IsOpen = Handle.ToInt32() != NativeMethods.INVALID_HANDLE_VALUE;
+            IsOpen = (ReadHandle.ToInt32() != NativeMethods.INVALID_HANDLE_VALUE &&
+                        WriteHandle.ToInt32() != NativeMethods.INVALID_HANDLE_VALUE);
         }
 
 
         public void CloseDevice()
         {
             if (!IsOpen) return;
-            CloseDeviceIO(Handle);
+            CloseDeviceIO(ReadHandle);
+            CloseDeviceIO(WriteHandle);
             IsOpen = false;
         }
 
@@ -150,7 +154,11 @@ namespace HidLibrary
         public async Task<HidDeviceData> ReadAsync(int timeout = 0)
         {
             var readDelegate = new ReadDelegate(Read);
+#if NET20 || NET35 || NET5_0_OR_GREATER
+            return await Task<HidDeviceData>.Factory.StartNew(() => readDelegate.Invoke(timeout));
+#else
             return await Task<HidDeviceData>.Factory.FromAsync(readDelegate.BeginInvoke, readDelegate.EndInvoke, timeout, null);
+#endif
         }
 
         public HidReport ReadReport()
@@ -178,7 +186,11 @@ namespace HidLibrary
         public async Task<HidReport> ReadReportAsync(int timeout = 0)
         {
             var readReportDelegate = new ReadReportDelegate(ReadReport);
+#if NET20 || NET35 || NET5_0_OR_GREATER
+            return await Task<HidReport>.Factory.StartNew(() => readReportDelegate.Invoke(timeout));
+#else
             return await Task<HidReport>.Factory.FromAsync(readReportDelegate.BeginInvoke, readReportDelegate.EndInvoke, timeout, null);
+#endif
         }
 
         /// <summary>
@@ -192,7 +204,7 @@ namespace HidLibrary
         {
             byte[] cmdBuffer = new byte[Capabilities.InputReportByteLength];
             cmdBuffer[0] = reportId;
-            bool bSuccess = NativeMethods.HidD_GetInputReport(Handle, cmdBuffer, cmdBuffer.Length);
+            bool bSuccess = NativeMethods.HidD_GetInputReport(ReadHandle, cmdBuffer, cmdBuffer.Length);
             HidDeviceData deviceData = new HidDeviceData(cmdBuffer, bSuccess ? HidDeviceData.ReadStatus.Success : HidDeviceData.ReadStatus.NoDataRead);
             return new HidReport(Capabilities.InputReportByteLength, deviceData);
         }
@@ -215,7 +227,7 @@ namespace HidLibrary
             try
             {
                 if (IsOpen)
-                    hidHandle = Handle;
+                    hidHandle = ReadHandle;
                 else
                     hidHandle = OpenDeviceIO(_devicePath, NativeMethods.ACCESS_NONE);
 
@@ -232,7 +244,7 @@ namespace HidLibrary
             }
             finally
             {
-                if (hidHandle != IntPtr.Zero && hidHandle != Handle)
+                if (hidHandle != IntPtr.Zero && hidHandle != ReadHandle)
                     CloseDeviceIO(hidHandle);
             }
 
@@ -247,11 +259,11 @@ namespace HidLibrary
             try
             {
                 if (IsOpen)
-                    hidHandle = Handle;
+                    hidHandle = ReadHandle;
                 else
                     hidHandle = OpenDeviceIO(_devicePath, NativeMethods.ACCESS_NONE);
 
-                success = NativeMethods.HidD_GetProductString(hidHandle, ref data[0], data.Length);
+                success = NativeMethods.HidD_GetProductString(hidHandle, data, data.Length);
             }
             catch (Exception exception)
             {
@@ -259,7 +271,7 @@ namespace HidLibrary
             }
             finally
             {
-                if (hidHandle != IntPtr.Zero && hidHandle != Handle)
+                if (hidHandle != IntPtr.Zero && hidHandle != ReadHandle)
                     CloseDeviceIO(hidHandle);
             }
 
@@ -274,11 +286,11 @@ namespace HidLibrary
             try
             {
                 if (IsOpen)
-                    hidHandle = Handle;
+                    hidHandle = ReadHandle;
                 else
                     hidHandle = OpenDeviceIO(_devicePath, NativeMethods.ACCESS_NONE);
 
-                success = NativeMethods.HidD_GetManufacturerString(hidHandle, ref data[0], data.Length);
+                success = NativeMethods.HidD_GetManufacturerString(hidHandle, data, data.Length);
             }
             catch (Exception exception)
             {
@@ -286,7 +298,7 @@ namespace HidLibrary
             }
             finally
             {
-                if (hidHandle != IntPtr.Zero && hidHandle != Handle)
+                if (hidHandle != IntPtr.Zero && hidHandle != ReadHandle)
                     CloseDeviceIO(hidHandle);
             }
 
@@ -301,11 +313,11 @@ namespace HidLibrary
             try
             {
                 if (IsOpen)
-                    hidHandle = Handle;
+                    hidHandle = ReadHandle;
                 else
                     hidHandle = OpenDeviceIO(_devicePath, NativeMethods.ACCESS_NONE);
 
-                success = NativeMethods.HidD_GetSerialNumberString(hidHandle, ref data[0], data.Length);
+                success = NativeMethods.HidD_GetSerialNumberString(hidHandle, data, data.Length);
             }
             catch (Exception exception)
             {
@@ -313,7 +325,7 @@ namespace HidLibrary
             }
             finally
             {
-                if (hidHandle != IntPtr.Zero && hidHandle != Handle)
+                if (hidHandle != IntPtr.Zero && hidHandle != ReadHandle)
                     CloseDeviceIO(hidHandle);
             }
 
@@ -357,7 +369,11 @@ namespace HidLibrary
         public async Task<bool> WriteAsync(byte[] data, int timeout = 0)
         {
             var writeDelegate = new WriteDelegate(Write);
+#if NET20 || NET35 || NET5_0_OR_GREATER
+            return await Task<bool>.Factory.StartNew(() => writeDelegate.Invoke(data, timeout));
+#else
             return await Task<bool>.Factory.FromAsync(writeDelegate.BeginInvoke, writeDelegate.EndInvoke, data, timeout, null);
+#endif
         }
 
         public bool WriteReport(HidReport report)
@@ -395,7 +411,7 @@ namespace HidLibrary
             if (null != report)
             {
                 byte[] buffer = report.GetBytes();
-                return (NativeMethods.HidD_SetOutputReport(Handle, buffer, buffer.Length));
+                return (NativeMethods.HidD_SetOutputReport(WriteHandle, buffer, buffer.Length));
             }
             else
                 throw new ArgumentException("The output report is null, it must be allocated before you call this method", "report");
@@ -404,7 +420,11 @@ namespace HidLibrary
         public async Task<bool> WriteReportAsync(HidReport report, int timeout = 0)
         {
             var writeReportDelegate = new WriteReportDelegate(WriteReport);
+#if NET20 || NET35 || NET5_0_OR_GREATER
+            return await Task<bool>.Factory.StartNew(() => writeReportDelegate.Invoke(report, timeout));
+#else
             return await Task<bool>.Factory.FromAsync(writeReportDelegate.BeginInvoke, writeReportDelegate.EndInvoke, report, timeout, null);
+#endif
         }
 
         public HidReport CreateReport()
@@ -426,7 +446,7 @@ namespace HidLibrary
             try
             {
                 if (IsOpen)
-                    hidHandle = Handle;
+                    hidHandle = WriteHandle;
                 else
                     hidHandle = OpenDeviceIO(_devicePath, NativeMethods.ACCESS_NONE);
 
@@ -439,7 +459,7 @@ namespace HidLibrary
             }
             finally
             {
-                if (hidHandle != IntPtr.Zero && hidHandle != Handle)
+                if (hidHandle != IntPtr.Zero && hidHandle != WriteHandle)
                     CloseDeviceIO(hidHandle);
             }
             return success;
@@ -533,7 +553,7 @@ namespace HidLibrary
             if (_deviceCapabilities.OutputReportByteLength <= 0) return false;
 
             var buffer = CreateOutputBuffer();
-            uint bytesWritten = 0;
+            uint bytesWritten;
 
             Array.Copy(data, 0, buffer, 0, Math.Min(data.Length, _deviceCapabilities.OutputReportByteLength));
 
@@ -554,7 +574,7 @@ namespace HidLibrary
 
                 try
                 {
-                    NativeMethods.WriteFile(Handle, buffer, (uint)buffer.Length, out bytesWritten, ref overlapped);
+                    NativeMethods.WriteFile(WriteHandle, buffer, (uint)buffer.Length, out bytesWritten, ref overlapped);
                 }
                 catch { return false; }
 
@@ -577,7 +597,7 @@ namespace HidLibrary
                 try
                 {
                     var overlapped = new NativeOverlapped();
-                    return NativeMethods.WriteFile(Handle, buffer, (uint)buffer.Length, out bytesWritten, ref overlapped);
+                    return NativeMethods.WriteFile(WriteHandle, buffer, (uint)buffer.Length, out bytesWritten, ref overlapped);
                 }
                 catch { return false; }
             }
@@ -591,7 +611,7 @@ namespace HidLibrary
 
             if (_deviceCapabilities.InputReportByteLength > 0)
             {
-                uint bytesRead = 0;
+                uint bytesRead;
 
                 buffer = CreateInputBuffer();
                 nonManagedBuffer = Marshal.AllocHGlobal(buffer.Length);
@@ -612,7 +632,7 @@ namespace HidLibrary
 
                     try
                     {
-                        var success = NativeMethods.ReadFile(Handle, nonManagedBuffer, (uint)buffer.Length, out bytesRead, ref overlapped);
+                        var success = NativeMethods.ReadFile(ReadHandle, nonManagedBuffer, (uint)buffer.Length, out bytesRead, ref overlapped);
 
                         if (success) 
                         {
@@ -626,11 +646,10 @@ namespace HidLibrary
                             {
                                 case NativeMethods.WAIT_OBJECT_0:
                                     status = HidDeviceData.ReadStatus.Success;
-                                    NativeMethods.GetOverlappedResult(Handle, ref overlapped, out bytesRead, false);
+                                    NativeMethods.GetOverlappedResult(ReadHandle, ref overlapped, out bytesRead, false);
                                     break;
                                 case NativeMethods.WAIT_TIMEOUT:
                                     status = HidDeviceData.ReadStatus.WaitTimedOut;
-                                    NativeMethods.CancelIo(Handle);
                                     buffer = new byte[] { };
                                     break;
                             case NativeMethods.WAIT_FAILED:
@@ -657,7 +676,7 @@ namespace HidLibrary
                     {
                         var overlapped = new NativeOverlapped();
 
-                        NativeMethods.ReadFile(Handle, nonManagedBuffer, (uint)buffer.Length, out bytesRead, ref overlapped);
+                        NativeMethods.ReadFile(ReadHandle, nonManagedBuffer, (uint)buffer.Length, out bytesRead, ref overlapped);
                         status = HidDeviceData.ReadStatus.Success;
                         Marshal.Copy(nonManagedBuffer, buffer, 0, (int)bytesRead);
                     }
@@ -684,7 +703,7 @@ namespace HidLibrary
             security.bInheritHandle = true;
             security.nLength = Marshal.SizeOf(security);
 
-            return NativeMethods.CreateFile(devicePath, deviceAccess, (int)shareMode, ref security, NativeMethods.OPEN_EXISTING, flags, 0);
+            return NativeMethods.CreateFile(devicePath, deviceAccess, (int)shareMode, ref security, NativeMethods.OPEN_EXISTING, flags, hTemplateFile: IntPtr.Zero);
         }
 
         private static void CloseDeviceIO(IntPtr handle)
@@ -699,13 +718,13 @@ namespace HidLibrary
         private void DeviceEventMonitorInserted()
         {
             if (!IsOpen) OpenDevice(_deviceReadMode, _deviceWriteMode, _deviceShareMode);
-            if (Inserted != null) Inserted();
+            Inserted?.Invoke();
         }
 
         private void DeviceEventMonitorRemoved()
         {
             if (IsOpen) CloseDevice();
-            if (Removed != null) Removed();
+            Removed?.Invoke();
         }
 
         public void Dispose()
