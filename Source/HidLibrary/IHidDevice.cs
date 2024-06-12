@@ -29,7 +29,8 @@ namespace HidLibrary
         event InsertedEventHandler Inserted;
         event RemovedEventHandler Removed;
 
-        IntPtr Handle { get; }
+        IntPtr ReadHandle { get; }
+        IntPtr WriteHandle { get; }
         bool IsOpen { get; }
         bool IsConnected { get; }
         string Description { get; }
@@ -42,7 +43,7 @@ namespace HidLibrary
         void OpenDevice();
 
         void OpenDevice(DeviceMode readMode, DeviceMode writeMode, ShareMode shareMode);
-        
+
         void CloseDevice();
 
         HidDeviceData Read();
