@@ -21,6 +21,7 @@
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Title>mi-360</Title>
+    <Version>0.7.0</Version>
     <Authors>Daniele Colanardi</Authors>
     <Description>XInput translation for Xiaomi Gamepad</Description>
     <Copyright>Copyright © 2017-2024</Copyright>
