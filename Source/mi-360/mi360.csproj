@@ -25,6 +25,7 @@
     <Description>XInput translation for Xiaomi Gamepad</Description>
     <Copyright>Copyright © 2017-2024</Copyright>
     <PackageProjectUrl>https://github.com/dancol90/mi-360</PackageProjectUrl>
+    <Version>0.7.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="ApplicationIcon.ico" />
