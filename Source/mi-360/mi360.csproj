@@ -3,7 +3,6 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <OutputType>WinExe</OutputType>
     <AssemblyName>mi-360</AssemblyName>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
   </PropertyGroup>
@@ -21,6 +20,11 @@
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Title>mi-360</Title>
+    <Authors>Daniele Colanardi</Authors>
+    <Description>XInput translation for Xiaomi Gamepad</Description>
+    <Copyright>Copyright © 2017-2024</Copyright>
+    <PackageProjectUrl>https://github.com/dancol90/mi-360</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="ApplicationIcon.ico" />
